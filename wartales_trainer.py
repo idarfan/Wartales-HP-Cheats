@@ -497,8 +497,9 @@ class App(tk.Tk):
 
         ar=tk.Frame(p,bg=BG2); ar.pack(fill="x",padx=6,pady=2)
         self._mb(ar,"➕ 加入角色清單",self._add_char,PURPLE,14).pack(side="left")
-        tk.Label(ar,text="← 選取後命名加入",bg=BG2,fg=GRAY,
-                 font=("Segoe UI",9)).pack(side="left",padx=6)
+        self._mb(ar,"🔄 更新位址",self._update_char_addr,TEAL,10).pack(side="left",padx=4)
+        tk.Label(ar,text="← 戰鬥中重掃後選角色＋候選更新",bg=BG2,fg=GRAY,
+                 font=("Segoe UI",9)).pack(side="left",padx=4)
 
         tk.Frame(p,bg=LINE,height=1).pack(fill="x",padx=6,pady=3)
 
@@ -605,6 +606,39 @@ class App(tk.Tk):
         self._refresh_char_list()
         self._refresh_pool()
         if added: self._st(f"加入 {added} 個角色，開始學習指標...",TEAL)
+
+    def _update_char_addr(self):
+        """用候選池選取的位址更新現有角色的 HP 位址，並重啟鎖定"""
+        if not self._chk(): return
+        pool_sel = self._pool_lb.curselection()
+        char_sel = self._char_sel()
+        if not pool_sel:
+            messagebox.showwarning("提示","請先在候選池選取新的 HP 位址"); return
+        if not char_sel:
+            messagebox.showwarning("提示","請先在角色清單選取要更新的角色"); return
+        if len(pool_sel) != len(char_sel):
+            messagebox.showwarning("提示",
+                f"候選池選了 {len(pool_sel)} 個，角色選了 {len(char_sel)} 個，數量需相同")
+            return
+        for idx, c in zip(pool_sel, char_sel):
+            if idx >= len(self._hp_pool): continue
+            new_addr = self._hp_pool[idx]
+            # 取消舊的鎖定迴圈
+            if c.job: self.after_cancel(c.job); c.job=None
+            # 更新位址
+            c.candidates = [new_addr]
+            c.stable_ptr = None   # 舊指標已失效
+            c.ptr_chain  = None
+            # 若原本是鎖定狀態，立即在新位址恢復鎖定
+            if c.locked and c.lock_val is not None:
+                self._do_char_lock(c, c.lock_val)
+            # 重新學習指標
+            self._bg_learn_ptr(c)
+        self._save_data()
+        self._refresh_char_list()
+        self._refresh_pool()
+        names = "、".join(c.name for c in char_sel)
+        self._st(f"{names}：位址已更新，重新學習指標中...", TEAL)
 
     def _bg_learn_ptr(self, char):
         """背景自動做指標掃描，學習該角色的穩定指標"""
