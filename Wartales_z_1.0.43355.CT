@@ -1,0 +1,4569 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>27859</ID>
+      <Description>"Initialize Table - Create Wartales Custom Value Type (Activate First)"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <Color>0000FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+
+{$lua}
+if syntaxcheck then return end
+
+if not getCustomType("Wartales") then
+registerCustomTypeAutoAssembler([[
+alloc(ConvertRoutine,1024)
+alloc(ConvertBackRoutine,1024)
+alloc(TypeName,256)
+alloc(ByteSize,4)
+alloc(UsesFloat,1)
+alloc(UsesString,1)
+alloc(MaxStringSize,2)
+alloc(CallMethod,1)
+
+TypeName:
+db 'Wartales',0
+ByteSize:
+dd 4
+UsesFloat:
+db 0
+UsesString:
+db 0
+MaxStringSize:
+dw #100
+CallMethod:
+db 1
+
+ConvertRoutine:
+[64-bit]
+mov eax,[rcx]
+xor eax,5B62DB6D
+xor edx,rdx
+mov ecx,1F
+div ecx
+[/64-bit]
+ret
+
+ConvertBackRoutine:
+[64-bit]
+xor rax,rax
+mov eax,ecx
+xor rcx,rcx
+mov ecx,1F
+mul ecx
+xor eax,5B62DB6D
+mov [r8],eax
+[/64-bit]
+ret
+]])
+end
+
+{$asm}
+
+//aobscanmodule(bTablePtr2,Wartales.exe,4C 8B 08 49 8B 41 40 4D 8B 51 30 41 8B 51 08 48 85 C0)
+aobscanmodule(bTablePtr3,Wartales.exe,48 8B 9C 24 68 01 00 00 48 81 C4 70 01 00 00 41 5E 5E 5D C3)
+label(startaddy1)
+registersymbol(startaddy1)
+label(zx3)
+registersymbol(zx3)
+
+//[[["Wartales.exe"+00020988]+0]+30]:
+//[["THREADSTACK0"-000000A0]+30]:
+//[[[bTablePtr2+(dword)[bTablePtr2-4]]+0]+30]:
+[bTablePtr3+(dword)[bTablePtr3-4]]:
+startaddy1:
+
+bTablePtr3+(dword)[bTablePtr3-4]+10:
+zx3:
+
+[DISABLE]
+
+unregistersymbol(zx3)
+unregistersymbol(startaddy1)
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>28172</ID>
+          <Description>"Cursor Pointer"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return "define(address,1)" end
+local memscan = createMemScan()
+local found = createFoundList(memscan)
+local bytes = "4C 8B ?? 4C 89 ?? D8 48 8B ?? ?? 48 B9"
+local start = 0x000000000000
+local stop  = 0x7FFFFFFFFFFF
+memscan.firstScan(
+  soExactValue, vtByteArray, rtRounded,
+  bytes, nil, start, stop, "+X-C+W",
+  fsmNotAligned, "1", true, false, false, false)
+memscan.waitTillDone()
+found.initialize()
+local count = found.Count
+local address = nil
+if count &gt; 0 then
+  address = found.Address[0]
+end
+memscan.Destroy()
+memscan = nil
+assert(count &gt; 0, "Unable to find array of bytes.")
+return "define(address," .. address .. ")"
+{$asm}
+//aobscan(cursor,4C 8B ?? 4C 89 ?? D8 48 8B ?? ?? 48 B9)
+alloc(newmem,$1000,address)
+
+label(cursor)
+label(cursorBkp)
+label(cursorPtr)
+label(return)
+
+newmem:
+  mov rax,cursorPtr
+  mov [rax],rcx
+cursorBkp:
+  readmem(address,7)
+  jmp return
+
+align 10
+cursorPtr:
+  dq 0
+
+address:
+cursor:
+  jmp newmem
+  nop 2
+return:
+registersymbol(cursor)
+registersymbol(cursorBkp)
+registersymbol(cursorPtr)
+
+[DISABLE]
+cursor:
+  readmem(cursorBkp,7)
+unregistersymbol(cursor)
+unregistersymbol(cursorBkp)
+unregistersymbol(cursorPtr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA0064781
+
+76CAA006474B: 49 B8 38 58 6A 11 CD 01 00 00  - mov r8,000001CD116A5838
+76CAA0064755: 48 BA 1D C6 BF 05 00 00 00 00  - mov rdx,0000000005BFC61D
+76CAA006475F: 49 8B CA                       - mov rcx,r10
+76CAA0064762: 48 B8 E0 97 49 C8 FD 7F 00 00  - mov rax,libhl.hl_dyn_getp
+76CAA006476C: 48 83 EC 20                    - sub rsp,20
+76CAA0064770: FF D0                          - call rax
+76CAA0064772: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA0064777: 48 83 C4 20                    - add rsp,20
+76CAA006477B: 48 89 45 D8                    - mov [rbp-28],rax
+76CAA006477F: EB 07                          - jmp 76CAA0064788
+// ---------- INJECTING HERE ----------
+76CAA0064781: 4C 8B 19                       - mov r11,[rcx]
+// ---------- DONE INJECTING  ----------
+76CAA0064784: 4C 89 5D D8                    - mov [rbp-28],r11
+76CAA0064788: 48 8B 55 D8                    - mov rdx,[rbp-28]
+76CAA006478C: 48 B9 F8 80 6B 11 CD 01 00 00  - mov rcx,000001CD116B80F8
+76CAA0064796: 48 B8 50 84 49 C8 FD 7F 00 00  - mov rax,libhl.hl_to_virtual
+76CAA00647A0: 48 83 EC 20                    - sub rsp,20
+76CAA00647A4: FF D0                          - call rax
+76CAA00647A6: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA00647AB: 48 83 C4 20                    - add rsp,20
+76CAA00647AF: 48 89 45 C8                    - mov [rbp-38],rax
+76CAA00647B3: 48 83 C4 60                    - add rsp,60
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28173</ID>
+              <Description>"Item Quantity"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Custom</VariableType>
+              <CustomType>Wartales</CustomType>
+              <Address>cursorPtr</Address>
+              <Offsets>
+                <Offset>-4</Offset>
+                <Offset>20</Offset>
+                <Offset>0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>27831</ID>
+              <Description>"Equipment Data"</Description>
+              <Options moHideChildren="1"/>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>cursorPtr</Address>
+              <Offsets>
+                <Offset>0</Offset>
+                <Offset>0</Offset>
+                <Offset>28</Offset>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>27832</ID>
+                  <Description>"Stars"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+60</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>27833</ID>
+                  <Description>"Level"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+64</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>27856</ID>
+                  <Description>"Required Level"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+58</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                    <Offset>e0</Offset>
+                    <Offset>0</Offset>
+                    <Offset>58</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>27834</ID>
+                  <Description>"Stolen?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+50</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>27849</ID>
+                  <Description>"Type"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>String</VariableType>
+                  <Length>256</Length>
+                  <Unicode>1</Unicode>
+                  <CodePage>0</CodePage>
+                  <ZeroTerminate>1</ZeroTerminate>
+                  <Address>+48</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28174</ID>
+          <Description>"Companion Pointer"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return "define(address,1)" end
+local name = "companion"
+local memscan = createMemScan()
+local found = createFoundList(memscan)
+local bytes = "8B ?? ?? ?? 00 00 89 ?? ?? 41 B8 01 00 00 00 44 89 45 98 44 3B"
+local start = 0x000000000000
+local stop  = 0x7FFFFFFFFFFF
+memscan.firstScan(
+  soExactValue, vtByteArray, rtRounded,
+  bytes, nil, start, stop, "+X-C+W",
+  fsmNotAligned, "1", true, false, false, false)
+memscan.waitTillDone()
+found.initialize()
+local count = found.Count
+local address = nil
+if count &gt; 0 then
+  address = found.Address[count - 1]
+end
+memscan.Destroy()
+memscan = nil
+assert(count &gt; 0, "Unable to find array of bytes.")
+return "define(address," .. address .. ")"
+{$asm}
+// bytes = "8B ?? ?? ?? 00 00 89 ?? ?? 41 B8 01 00 00 00 44 89 ?? ?? 44 3B"
+alloc(newmem,$1000,address)
+
+label(companion)
+label(companionBkp)
+label(companionPtr)
+label(return)
+
+newmem:
+  mov rax,companionPtr
+  mov [rax],rcx
+companionBkp:
+  readmem(address,6)
+  jmp return
+
+align 10
+companionPtr:
+  dq 0
+
+address:
+companion:
+  jmp newmem
+  nop
+return:
+registersymbol(companion)
+registersymbol(companionBkp)
+registersymbol(companionPtr)
+
+[DISABLE]
+companion:
+  readmem(companionBkp,6)
+unregistersymbol(companion)
+unregistersymbol(companionBkp)
+unregistersymbol(companionPtr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA011C39F
+
+76CAA011C371: 0F AE 5C 24 FC        - stmxcsr [rsp-04]
+76CAA011C376: 8B 44 24 FC           - mov eax,[rsp-04]
+76CAA011C37A: 81 C8 00 60 00 00     - or eax,00006000
+76CAA011C380: 89 44 24 F8           - mov [rsp-08],eax
+76CAA011C384: 0F AE 54 24 F8        - ldmxcsr [rsp-08]
+76CAA011C389: F2 44 0F 2D DB        - cvtsd2si r11d,xmm3
+76CAA011C38E: 0F AE 54 24 FC        - ldmxcsr [rsp-04]
+76CAA011C393: 44 89 5D 9C           - mov [rbp-64],r11d
+76CAA011C397: 44 89 5D BC           - mov [rbp-44],r11d
+76CAA011C39B: 48 8B 4D 10           - mov rcx,[rbp+10]
+// ---------- INJECTING HERE ----------
+76CAA011C39F: 8B 91 C0 00 00 00     - mov edx,[rcx+000000C0]
+// ---------- DONE INJECTING  ----------
+76CAA011C3A5: 89 55 9C              - mov [rbp-64],edx
+76CAA011C3A8: 41 B8 01 00 00 00     - mov r8d,00000001
+76CAA011C3AE: 44 89 45 98           - mov [rbp-68],r8d
+76CAA011C3B2: 44 3B C2              - cmp r8d,edx
+76CAA011C3B5: 0F 8D D4 01 00 00     - jnl 76CAA011C58F
+76CAA011C3BB: 45 33 C9              - xor r9d,r9d
+76CAA011C3BE: 44 89 4D 98           - mov [rbp-68],r9d
+76CAA011C3C2: 44 3B 4D BC           - cmp r9d,[rbp-44]
+76CAA011C3C6: 0F 8D C3 01 00 00     - jnl 76CAA011C58F
+76CAA011C3CC: 44 8B 91 C0 00 00 00  - mov r10d,[rcx+000000C0]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28175</ID>
+              <Description>"Selected Unit"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1" moAllowManualCollapseAndExpand="1"/>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>companionPtr</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28176</ID>
+                  <Description>"Name (do not change)"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>String</VariableType>
+                  <Length>256</Length>
+                  <Unicode>1</Unicode>
+                  <CodePage>0</CodePage>
+                  <ZeroTerminate>1</ZeroTerminate>
+                  <Address>+50</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28177</ID>
+                  <Description>"Class (do not change)"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>String</VariableType>
+                  <Length>256</Length>
+                  <Unicode>1</Unicode>
+                  <CodePage>0</CodePage>
+                  <ZeroTerminate>1</ZeroTerminate>
+                  <Address>+60</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>27890</ID>
+                  <Description>"Copy Class Pointer from Another Companion"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>+68</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28178</ID>
+                  <Description>"Level"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+c0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28179</ID>
+                  <Description>"Experience"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+D8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28180</ID>
+                  <Description>"Carrying Capacity"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+1e0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28181</ID>
+                  <Description>"Aptitude Points"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+c4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28740</ID>
+                  <Description>"Profession Experience"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>companionPtr</Address>
+                  <Offsets>
+                    <Offset>5C</Offset>
+                    <Offset>148</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28326</ID>
+                  <Description>"Attribute Increases"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>+88</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                    <Offset>10</Offset>
+                    <Offset>8</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>28328</ID>
+                      <Description>"Attr 1 Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>256</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>8</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28345</ID>
+                      <Description>"Attr 1 Num"</Description>
+                      <Options moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>24</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28331</ID>
+                      <Description>"Attr 2 Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>256</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>8</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28332</ID>
+                      <Description>"Attr 2 Num"</Description>
+                      <Options moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+8</Address>
+                      <Offsets>
+                        <Offset>24</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28334</ID>
+                      <Description>"Attr 3 Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>256</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+10</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>8</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28335</ID>
+                      <Description>"Attr 3 Num"</Description>
+                      <Options moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+10</Address>
+                      <Offsets>
+                        <Offset>24</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28747</ID>
+                      <Description>"Attr 4 Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>256</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>8</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28338</ID>
+                      <Description>"Attr 4 Num"</Description>
+                      <Options moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+18</Address>
+                      <Offsets>
+                        <Offset>24</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28748</ID>
+                      <Description>"Attr 5 Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>256</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+20</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>8</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28341</ID>
+                      <Description>"Attr 5 Num"</Description>
+                      <Options moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+20</Address>
+                      <Offsets>
+                        <Offset>24</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28749</ID>
+                      <Description>"Attr 6 Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>256</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+28</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>8</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28344</ID>
+                      <Description>"Attr 6 Num"</Description>
+                      <Options moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+28</Address>
+                      <Offsets>
+                        <Offset>24</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28346</ID>
+                  <Description>"Class Base Attributes (Not fixed)"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>+70</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                    <Offset>8</Offset>
+                    <Offset>58</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>28347</ID>
+                      <Description>"Strength"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0*8+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28348</ID>
+                      <Description>"Dexterity"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1*8+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>28</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28349</ID>
+                      <Description>"Constitution"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+2*8+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>30</Offset>
+                        <Offset>30</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28350</ID>
+                      <Description>"Willpower"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+5*8+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>30</Offset>
+                        <Offset>30</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28351</ID>
+                      <Description>"Movement"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+4*8+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>30</Offset>
+                        <Offset>30</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28352</ID>
+                      <Description>"Carrying Capacity"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+6*8+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>30</Offset>
+                        <Offset>30</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28353</ID>
+                      <Description>"???"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+3*8+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>30</Offset>
+                        <Offset>30</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28768</ID>
+          <Description>"Combat selected"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+
+aobscanregion(combatptrs2,startaddy1,startaddy1+1fff0000,4C 8B 99 70 03 00 00 4C 89 5D E0 4D 85 DB 0F)
+registersymbol(combatptrs2)
+
+alloc(newmem,$1000,combatptrs2)
+
+registersymbol(cmbtptrs)
+label(cmbtptrs)
+label(return)
+
+newmem:
+  mov r11,[rcx+00000370]
+cmp [rcx+00000378],1
+jne return
+lea r11,[r11]
+mov rax,cmbtptrs
+mov [rax],r11
+  jmp return
+align 8
+cmbtptrs:
+
+combatptrs2:
+  jmp newmem
+  nop 2
+return:
+
+[DISABLE]
+
+combatptrs2:
+  db 4C 8B 99 70 03 00 00
+
+unregistersymbol(*)
+dealloc(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA0496E43
+
+76CAA0496E11: 48 83 EC 08                    - sub rsp,08
+76CAA0496E15: 68 42 C6 DC 15                 - push 15DCC642
+76CAA0496E1A: 48 B8 00 14 00 9F CA 76 00 00  - mov rax,000076CA9F001400
+76CAA0496E24: 48 83 EC 20                    - sub rsp,20
+76CAA0496E28: FF D0                          - call rax
+76CAA0496E2A: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA0496E2F: 4D 8B 91 90 00 00 00           - mov r10,[r9+00000090]
+76CAA0496E36: 4C 89 55 F8                    - mov [rbp-08],r10
+76CAA0496E3A: 4D 85 D2                       - test r10,r10
+76CAA0496E3D: 0F 84 88 0B 00 00              - je 76CAA04979CB
+// ---------- INJECTING HERE ----------
+76CAA0496E43: 4C 8B 99 70 03 00 00           - mov r11,[rcx+00000370]
+// ---------- DONE INJECTING  ----------
+76CAA0496E4A: 4C 89 5D E0                    - mov [rbp-20],r11
+76CAA0496E4E: 4D 85 DB                       - test r11,r11
+76CAA0496E51: 0F 84 74 0B 00 00              - je 76CAA04979CB
+76CAA0496E57: 4C 8B 99 70 03 00 00           - mov r11,[rcx+00000370]
+76CAA0496E5E: 4C 89 5D E0                    - mov [rbp-20],r11
+76CAA0496E62: 4D 85 DB                       - test r11,r11
+76CAA0496E65: 75 1E                          - jne 76CAA0496E85
+76CAA0496E67: 48 83 EC 08                    - sub rsp,08
+76CAA0496E6B: 68 A8 47 CF 1D                 - push 1DCF47A8
+76CAA0496E70: 48 B8 00 14 00 9F CA 76 00 00  - mov rax,000076CA9F001400
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28769</ID>
+              <Description>"Armor"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>cmbtptrs</Address>
+              <Offsets>
+                <Offset>138</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28770</ID>
+              <Description>"Health"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>cmbtptrs</Address>
+              <Offsets>
+                <Offset>13C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28771</ID>
+              <Description>"Movement"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>cmbtptrs</Address>
+              <Offsets>
+                <Offset>160</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>126</ID>
+          <Description>"Increase Movement"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+aobScanRegion(speed, startaddy1, startaddy1+1fff0000, F2 48 0F 11 ?? ?? ?? 8B ?? ?? F2 49 0F 10 ?? ?? ?? 00 00 F2 48 0F 11 ?? ?? ?? 8B ?? ?? ?? 89)
+alloc(newmem,$100,speed)
+label(return)
+label(speedBkp)
+label(speedVal)
+registersymbol(speed)
+registersymbol(speedBkp)
+registersymbol(speedVal)
+
+alloc(speedTest,8)
+registersymbol(speedTest)
+
+newmem:
+  push rax
+  mov rax,[r11+ac]
+  test rax,rax
+  je @f
+  cmp rax,3fe00000
+  je @f
+  readmem(speed+0A,9)
+  addsd xmm4,[speedVal]
+  mov [speedTest],rax
+  pop rax
+  jmp return
+@@:
+  pop rax
+speedBkp:
+  readmem(speed+0A,9)
+  jmp return
+
+align 10
+speedVal:
+  dq (double)25.0
+
+speed+0A:
+  jmp newmem
+  nop 4
+return:
+
+
+[DISABLE]
+speed+0A:
+  readmem(speedBkp,9)
+unregistersymbol(*)
+dealloc(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9FCB2207
+
+76CA9FCB21D0: F2 48 0F 59 C9                 - mulsd xmm1,xmm1
+76CA9FCB21D5: F2 48 0F 11 4D A8              - movsd [rbp-58],xmm1
+76CA9FCB21DB: F2 48 0F 10 55 B8              - movsd xmm2,[rbp-48]
+76CA9FCB21E1: F2 48 0F 59 D2                 - mulsd xmm2,xmm2
+76CA9FCB21E6: F2 48 0F 11 55 A0              - movsd [rbp-60],xmm2
+76CA9FCB21EC: F2 48 0F 58 CA                 - addsd xmm1,xmm2
+76CA9FCB21F1: F2 48 0F 11 4D A8              - movsd [rbp-58],xmm1
+76CA9FCB21F7: F2 48 0F 59 C0                 - mulsd xmm0,xmm0
+76CA9FCB21FC: F2 48 0F 11 45 A0              - movsd [rbp-60],xmm0
+76CA9FCB2202: F2 48 0F 58 C8                 - addsd xmm1,xmm0
+// ---------- INJECTING HERE ----------
+76CA9FCB2207: F2 48 0F 11 4D A8              - movsd [rbp-58],xmm1          //speed
+// ---------- DONE INJECTING  ----------
+76CA9FCB220D: 4C 8B 5D 10                    - mov r11,[rbp+10]
+76CA9FCB2211: F2 49 0F 10 A3 10 01 00 00     - movsd xmm4,[r11+00000110]    //speed+0A
+76CA9FCB221A: F2 48 0F 11 65 A0              - movsd [rbp-60],xmm4
+76CA9FCB2220: 49 8B 4B 08                    - mov rcx,[r11+08]
+76CA9FCB2224: 48 89 4D 80                    - mov [rbp-80],rcx
+76CA9FCB2228: 48 85 C9                       - test rcx,rcx
+76CA9FCB222B: 75 1E                          - jne 76CA9FCB224B
+76CA9FCB222D: 48 83 EC 08                    - sub rsp,08
+76CA9FCB2231: 68 CD 95 64 EE                 - push FFFFFFFFEE6495CD
+76CA9FCB2236: 48 B8 D0 13 00 9F CA 76 00 00  - mov rax,000076CA9F0013D0
+}
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>127</ID>
+              <Description>"Speed"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Double</VariableType>
+              <Address>speedVal</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28760</ID>
+          <Description>"Stat Header"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Wartales.exe
+  Version: 
+  Date   : 2025-06-07
+  Author : 86152
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobscanregion(StatAddr,startaddy1,startaddy1+1fff0000,48 8B C1 48 8B 48 18 48 85 C9 75 35 49 B8 xx xx xx xx xx xx xx xx 48 BA 26) // should be unique
+alloc(newmem,$100,StatAddr)
+
+label(code)
+label(return)
+registersymbol(StatHead)
+label(StatHead)
+
+newmem:
+  cmp r9,0
+  jne code
+  cmp r10,4
+  jne code
+  mov [StatHead],rcx
+code:
+  mov rax,rcx
+  mov rcx,[rax+18]
+  jmp return
+align 8
+StatHead:
+  dq 0
+
+StatAddr:
+  jmp newmem
+  nop 2
+return:
+registersymbol(StatAddr)
+
+[DISABLE]
+
+StatAddr:
+  db 48 8B C1 48 8B 48 18
+
+unregistersymbol(*)
+dealloc(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA018CF4F
+
+76CAA018CF24: 48 83 EC 60                    - sub rsp,60
+76CAA018CF28: 48 89 4D 10                    - mov [rbp+10],rcx
+76CAA018CF2C: 48 85 C9                       - test rcx,rcx
+76CAA018CF2F: 75 1E                          - jne 76CAA018CF4F
+76CAA018CF31: 48 83 EC 08                    - sub rsp,08
+76CAA018CF35: 68 26 7A 4B 00                 - push 004B7A26
+76CAA018CF3A: 48 B8 F0 13 00 9F CA 76 00 00  - mov rax,000076CA9F0013F0
+76CAA018CF44: 48 83 EC 20                    - sub rsp,20
+76CAA018CF48: FF D0                          - call rax
+76CAA018CF4A: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+// ---------- INJECTING HERE ----------
+76CAA018CF4F: 48 8B C1                       - mov rax,rcx
+// ---------- DONE INJECTING  ----------
+76CAA018CF52: 48 8B 48 18                    - mov rcx,[rax+18]
+76CAA018CF56: 48 85 C9                       - test rcx,rcx
+76CAA018CF59: 75 35                          - jne 76CAA018CF90
+76CAA018CF5B: 49 B8 B8 60 D5 3A 91 02 00 00  - mov r8,000002913AD560B8
+76CAA018CF65: 48 BA 26 7A 4B 00 00 00 00 00  - mov rdx,00000000004B7A26
+76CAA018CF6F: 48 8B C8                       - mov rcx,rax
+76CAA018CF72: 48 B8 00 19 58 AF FF 7F 00 00  - mov rax,libhl.hl_dyn_geti
+76CAA018CF7C: 48 83 EC 20                    - sub rsp,20
+76CAA018CF80: FF D0                          - call rax
+76CAA018CF82: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28761</ID>
+              <Description>"Krowns"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Custom</VariableType>
+              <CustomType>Wartales</CustomType>
+              <Address>StatHead</Address>
+              <Offsets>
+                <Offset>0</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28763</ID>
+              <Description>"Influence"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Custom</VariableType>
+              <CustomType>Wartales</CustomType>
+              <Address>StatHead</Address>
+              <Offsets>
+                <Offset>8</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28762</ID>
+              <Description>"Happiness"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Custom</VariableType>
+              <CustomType>Wartales</CustomType>
+              <Address>StatHead</Address>
+              <Offsets>
+                <Offset>10</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28764</ID>
+              <Description>"Bravery Point"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Custom</VariableType>
+              <CustomType>Wartales</CustomType>
+              <Address>StatHead</Address>
+              <Offsets>
+                <Offset>18</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28766</ID>
+              <Description>"???"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Custom</VariableType>
+              <CustomType>Wartales</CustomType>
+              <Address>StatHead</Address>
+              <Offsets>
+                <Offset>20</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28765</ID>
+              <Description>"Food Consumption???"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Custom</VariableType>
+              <CustomType>Wartales</CustomType>
+              <Address>StatHead</Address>
+              <Offsets>
+                <Offset>28</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28744</ID>
+          <Description>"Suspicion Rate"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Wartales.exe
+  Version: 
+  Date   : 2025-01-06
+  Author : 86152
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobScanRegion(Suspicious, startaddy1, startaddy1+1fff0000, C8 F2 48 0F 59 D8 F2 48 0F 11 9D 00) // should be unique
+alloc(newmemSus,$100,Suspicious)
+registersymbol(newmemSus)
+registersymbol(Suspicious)
+label(susCode)
+label(return)
+
+newmemSus:
+  jmp susCode
+
+newmemSus+10:
+  dq (double)1.0
+
+susCode:
+  mulsd xmm3,xmm0
+  addsd xmm3,[newmemSus+10]
+  jmp return
+
+Suspicious+01:
+  jmp newmemSus
+return:
+
+
+[DISABLE]
+
+Suspicious+01:
+  db F2 48 0F 59 D8
+
+unregistersymbol(*)
+dealloc(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA1930145
+
+76CAA1930108: EB 05                       - jmp 76CAA193010F
+76CAA193010A: 66 48 0F 57 D2              - xorpd xmm2,xmm2
+76CAA193010F: F2 48 0F 11 95 20 FF FF FF  - movsd [rbp-000000E0],xmm2
+76CAA1930118: F2 48 0F 10 5D 18           - movsd xmm3,[rbp+18]
+76CAA193011E: F2 48 0F 5E DA              - divsd xmm3,xmm2
+76CAA1930123: F2 48 0F 11 9D 58 FF FF FF  - movsd [rbp-000000A8],xmm3
+76CAA193012C: 4C 8B 45 10                 - mov r8,[rbp+10]
+76CAA1930130: F2 49 0F 10 68 60           - movsd xmm5,[r8+60]
+76CAA1930136: F2 48 0F 11 AD 20 FF FF FF  - movsd [rbp-000000E0],xmm5
+76CAA193013F: F2 48 0F 10 45 C8           - movsd xmm0,[rbp-38]
+// ---------- INJECTING HERE ----------
+76CAA1930145: F2 48 0F 59 D8              - mulsd xmm3,xmm0
+// ---------- DONE INJECTING  ----------
+76CAA193014A: F2 48 0F 11 9D 00 FF FF FF  - movsd [rbp-00000100],xmm3
+76CAA1930153: F2 48 0F 5C EB              - subsd xmm5,xmm3
+76CAA1930158: F2 48 0F 11 AD 20 FF FF FF  - movsd [rbp-000000E0],xmm5
+76CAA1930161: 49 8B C8                    - mov rcx,r8
+76CAA1930164: F2 48 0F 10 CD              - movsd xmm1,xmm5
+76CAA1930169: 48 83 EC 20                 - sub rsp,20
+76CAA193016D: E8 1E 38 00 00              - call 76CAA1933990
+76CAA1930172: 48 89 6C 24 F8              - mov [rsp-08],rbp
+76CAA1930177: 48 83 C4 20                 - add rsp,20
+76CAA193017B: F2 48 0F 11 85 20 FF FF FF  - movsd [rbp-000000E0],xmm0
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28745</ID>
+              <Description>"Additional Rate (Default: 0.5/180 = 0.00277778)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Double</VariableType>
+              <Address>newmemSus+10</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28751</ID>
+          <Description>"Tavern Crown Ratio (Turn off when not using)"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Wartales.exe
+  Version: 
+  Date   : 2025-03-02
+  Author : 86152
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobScanRegion(TavernCrownRate, startaddy1, startaddy1+1fff0000, 89 11 48 8B 4D 10 48 83 EC 20 E8 12) // should be unique
+alloc(newmemCrown,$100,TavernCrownRate)
+label(returnCrown)
+registersymbol(TavernCrownRate)
+registersymbol(newmemCrown)
+
+newmemCrown:
+  mov rdx,[newmemCrown+20]
+  mov [rcx],edx
+  mov rcx,[rbp+10]
+  jmp returnCrown
+
+newmemCrown+20:
+  db 64
+
+TavernCrownRate:
+  jmp newmemCrown
+  nop
+returnCrown:
+
+[DISABLE]
+
+TavernCrownRate:
+  db 89 11 48 8B 4D 10
+
+unregistersymbol(*)
+dealloc(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA03EF6EF
+
+76CAA03EF6BA: 49 B8 B8 60 37 22 CA 01 00 00  - mov r8,000001CA223760B8
+76CAA03EF6C4: 48 BA B4 9B E3 EB FF FF FF FF  - mov rdx,FFFFFFFFEBE39BB4
+76CAA03EF6CE: 48 8B C8                       - mov rcx,rax
+76CAA03EF6D1: 48 B8 B0 24 9C 08 F9 7F 00 00  - mov rax,libhl.hl_dyn_seti
+76CAA03EF6DB: 48 83 EC 20                    - sub rsp,20
+76CAA03EF6DF: FF D0                          - call rax
+76CAA03EF6E1: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA03EF6E6: 48 83 C4 20                    - add rsp,20
+76CAA03EF6EA: EB 05                          - jmp 76CAA03EF6F1
+76CAA03EF6EC: 8B 55 20                       - mov edx,[rbp+20]
+// ---------- INJECTING HERE ----------
+76CAA03EF6EF: 89 11                          - mov [rcx],edx
+// ---------- DONE INJECTING  ----------
+76CAA03EF6F1: 48 8B 4D 10                    - mov rcx,[rbp+10]
+76CAA03EF6F5: 48 83 EC 20                    - sub rsp,20
+76CAA03EF6F9: E8 12 05 00 00                 - call 76CAA03EFC10
+76CAA03EF6FE: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA03EF703: 48 83 C4 20                    - add rsp,20
+76CAA03EF707: 48 8B 45 F8                    - mov rax,[rbp-08]
+76CAA03EF70B: 48 83 C4 10                    - add rsp,10
+76CAA03EF70F: 5D                             - pop rbp
+76CAA03EF710: 48 C3                          - ret
+76CAA03EF712: 90                             - nop
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28752</ID>
+              <Description>"Crown Ratio"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>newmemCrown+20</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28767</ID>
+          <Description>"Contract negotiate always success"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Wartales.exe
+  Version: 
+  Date   : 2025-06-08
+  Author : 86152
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobscanregion(TractBonus,startaddy1,startaddy1+1fff0000,E8 44 8B 4D BC F2 41 0F 2A D1) // should be unique
+alloc(newmem,$100,TractBonus)
+
+label(code)
+label(return)
+
+newmem:
+  xor r9d,r9d
+code:
+  cvtsi2sd xmm2,r9d
+  jmp return
+
+TractBonus+05:
+  jmp newmem
+return:
+registersymbol(TractBonus)
+
+[DISABLE]
+
+TractBonus+05:
+  db F2 41 0F 2A D1
+
+unregistersymbol(*)
+dealloc(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA030693D
+
+76CAA0306913: 48 83 EC 20                    - sub rsp,20
+76CAA0306917: FF D0                          - call rax
+76CAA0306919: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA030691E: 49 8B C8                       - mov rcx,r8
+76CAA0306921: 48 83 EC 20                    - sub rsp,20
+76CAA0306925: E8 26 74 28 00                 - call 76CAA058DD50
+76CAA030692A: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA030692F: 48 83 C4 20                    - add rsp,20
+76CAA0306933: F2 48 0F 11 45 E8              - movsd [rbp-18],xmm0
+76CAA0306939: 44 8B 4D BC                    - mov r9d,[rbp-44]
+// ---------- INJECTING HERE ----------
+76CAA030693D: F2 41 0F 2A D1                 - cvtsi2sd xmm2,r9d
+// ---------- DONE INJECTING  ----------
+76CAA0306942: F2 48 0F 11 55 80              - movsd [rbp-80],xmm2
+76CAA0306948: 66 48 0F 2F C2                 - comisd xmm0,xmm2
+76CAA030694D: 7B 06                          - jnp 76CAA0306955
+76CAA030694F: 4D 33 DB                       - xor r11,r11
+76CAA0306952: 4C 3B DC                       - cmp r11,rsp
+76CAA0306955: 0F 82 E5 03 00 00              - jb 76CAA0306D40
+76CAA030695B: 48 8B 45 A0                    - mov rax,[rbp-60]
+76CAA030695F: 48 85 C0                       - test rax,rax
+76CAA0306962: 75 15                          - jne 76CAA0306979
+76CAA0306964: 48 B8 90 13 00 9F CA 76 00 00  - mov rax,000076CA9F001390
+}
+</AssemblerScript>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>28746</ID>
+      <Description>"----------------------------------------------------------"</Description>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>28467</ID>
+      <Description>"Unused / Need Update"</Description>
+      <Options moHideChildren="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>28666</ID>
+          <Description>"Unlimited Resources"</Description>
+          <Color>3943EE</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return "define(address,1)" end
+local memscan = createMemScan()
+local found = createFoundList(memscan)
+local bytes = "2B ?? ?? ?? ?? ?? 89 ?? ?? ?? ?? ?? 48 8B ?? ?? 48 85"
+local start = 0x000000000000
+local stop  = 0x7FFFFFFFFFFF
+memscan.firstScan(
+  soExactValue, vtByteArray, rtRounded,
+  bytes, nil, start, stop, "+X-C+W",
+  fsmNotAligned, "1", true, false, false, false)
+memscan.waitTillDone()
+found.initialize()
+local count = found.Count
+local address = nil
+if count &gt; 0 then
+  address = found.Address[0]
+end
+memscan.Destroy()
+memscan = nil
+assert(count &gt; 0, "Unable to find array of bytes.")
+return "define(address," .. address .. ")"
+{$asm}
+//aobscan(repair,2B ?? ?? ?? ?? ?? 89 ?? ?? ?? ?? ?? 48 8B ?? ?? 48 85)
+label(repair)
+alloc(repairBkp,6)
+repairBkp:
+  readmem(address,6)
+address:
+repair:
+  nop 6
+registersymbol(repair)
+registersymbol(repairBkp)
+
+[DISABLE]
+repair:
+  readmem(repairBkp,6)
+unregistersymbol(repair)
+unregistersymbol(repairBkp)
+dealloc(repairBkp)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9F67683A
+
+76CA9F67680D: FF D0                          - call rax
+76CA9F67680F: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9F676814: 48 83 C4 20                    - add rsp,20
+76CA9F676818: 48 89 85 70 FF FF FF           - mov [rbp-00000090],rax
+76CA9F67681F: 48 8B C8                       - mov rcx,rax
+76CA9F676822: 48 83 EC 20                    - sub rsp,20
+76CA9F676826: E8 D5 48 14 00                 - call 76CA9F7BB100
+76CA9F67682B: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9F676830: 48 83 C4 20                    - add rsp,20
+76CA9F676834: 89 85 44 FF FF FF              - mov [rbp-000000BC],eax
+// ---------- INJECTING HERE ----------
+76CA9F67683A: 2B 85 48 FF FF FF              - sub eax,[rbp-000000B8]
+// ---------- DONE INJECTING  ----------
+76CA9F676840: 89 85 44 FF FF FF              - mov [rbp-000000BC],eax
+76CA9F676846: 48 8B 4D 90                    - mov rcx,[rbp-70]
+76CA9F67684A: 48 85 C9                       - test rcx,rcx
+76CA9F67684D: 75 15                          - jne 76CA9F676864
+76CA9F67684F: 48 B8 60 1B 00 9F CA 76 00 00  - mov rax,000076CA9F001B60
+76CA9F676859: 48 83 EC 20                    - sub rsp,20
+76CA9F67685D: FF D0                          - call rax
+76CA9F67685F: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9F676864: BA 1F 00 00 00                 - mov edx,0000001F
+76CA9F676869: 89 95 3C FF FF FF              - mov [rbp-000000C4],edx
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28667</ID>
+          <Description>"Ignore Level Requirement"</Description>
+          <Color>3943EE</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return "define(address,1)" end
+local memscan = createMemScan()
+local found = createFoundList(memscan)
+local bytes = "48 33 ?? 89 ?? ?? 3B ?? 0F 8D ?? ?? ?? ?? 45 33 C0"
+local start = 0x000000000000
+local stop  = 0x7FFFFFFFFFFF
+memscan.firstScan(
+  soExactValue, vtByteArray, rtRounded,
+  bytes, nil, start, stop, "+X-C+W",
+  fsmNotAligned, "1", true, false, false, false)
+memscan.waitTillDone()
+found.initialize()
+local count = found.Count
+local address = nil
+if count &gt; 0 then
+  address = found.Address[0]
+end
+memscan.Destroy()
+memscan = nil
+assert(count &gt; 0, "Unable to find array of bytes.")
+return "define(address," .. address .. ")"
+{$asm}
+//aobscan(levelReq,48 33 ?? 89 ?? ?? 3B ?? 0F 8D ?? ?? ?? ?? 45 33 C0)
+label(levelReq)
+address+08:
+levelReq:
+  db 90 E9
+registersymbol(levelReq)
+
+[DISABLE]
+levelReq:
+  db 0F 8D
+unregistersymbol(levelReq)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA035C254
+
+76CAA035C234: 48 8B 4D 10        - mov rcx,[rbp+10]
+76CAA035C238: 8B 91 B0 00 00 00  - mov edx,[rcx+000000B0]
+76CAA035C23E: 89 55 F4           - mov [rbp-0C],edx
+76CAA035C241: 48 85 C0           - test rax,rax
+76CAA035C244: 74 06              - je 76CAA035C24C
+76CAA035C246: 48 8B 40 08        - mov rax,[rax+08]
+76CAA035C24A: EB 03              - jmp 76CAA035C24F
+76CAA035C24C: 48 33 C0           - xor rax,rax
+76CAA035C24F: 89 45 F0           - mov [rbp-10],eax
+76CAA035C252: 3B D0              - cmp edx,eax
+// ---------- INJECTING HERE ----------
+76CAA035C254: 0F 8D 11 00 00 00  - jnl 76CAA035C26B
+// ---------- DONE INJECTING  ----------
+76CAA035C25A: 45 33 C0           - xor r8d,r8d
+76CAA035C25D: 44 88 45 EF        - mov [rbp-11],r8b
+76CAA035C261: 49 8B C0           - mov rax,r8
+76CAA035C264: 48 83 C4 20        - add rsp,20
+76CAA035C268: 5D                 - pop rbp
+76CAA035C269: 48 C3              - ret 
+76CAA035C26B: 48 8B 4D 10        - mov rcx,[rbp+10]
+76CAA035C26F: 48 8B 55 18        - mov rdx,[rbp+18]
+76CAA035C273: 48 83 EC 20        - sub rsp,20
+76CAA035C277: E8 44 DD FF FF     - call 76CAA0359FC0
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28668</ID>
+          <Description>"Rouste Script (wait for first point)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Wartales.exe
+  Version: 
+  Date   : 2023-05-15
+  Author : SanitKa
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobScanRegion(rouste, regionStart, regionEnd, C4 48 8B 4C D0 18 48 89 4D A8 48 89 4D B0 4C) // should be unique
+alloc(newmem,$100,rouste)
+
+label(code)
+label(return)
+label(ptr_rouste)
+
+newmem:
+  mov [ptr_rouste],rax
+
+code:
+  mov rcx,[rax+rdx*8+18]
+  jmp return
+
+ptr_rouste:
+  dq 0
+
+rouste+01:
+  jmp newmem
+return:
+registersymbol(rouste)
+registersymbol(ptr_rouste)
+
+[DISABLE]
+
+rouste+01:
+  db 48 8B 4C D0 18
+
+unregistersymbol(rouste)
+unregistersymbol(ptr_rouste)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAB4018F7
+
+76CAB4018D0: 45 3B C8                       - cmp r9d,r8d
+76CAB4018D3: 0F 82 0C 00 00 00              - jb 76CAB4018E5
+76CAB4018D9: 4D 33 D2                       - xor r10,r10
+76CAB4018DC: 4C 89 55 B0                    - mov [rbp-50],r10
+76CAB4018E0: E9 1F 00 00 00                 - jmp 76CAB401904
+76CAB4018E5: 4C 8B 5D C8                    - mov r11,[rbp-38]
+76CAB4018E9: 49 8B 43 10                    - mov rax,[r11+10]
+76CAB4018ED: 48 89 45 A0                    - mov [rbp-60],rax
+76CAB4018F1: 48 33 D2                       - xor rdx,rdx
+76CAB4018F4: 8B 55 C4                       - mov edx,[rbp-3C]
+// ---------- INJECTING HERE ----------
+76CAB4018F7: 48 8B 4C D0 18                 - mov rcx,[rax+rdx*8+18]
+// ---------- DONE INJECTING  ----------
+76CAB4018FC: 48 89 4D A8                    - mov [rbp-58],rcx
+76CAB401900: 48 89 4D B0                    - mov [rbp-50],rcx
+76CAB401904: 4C 8B 45 B0                    - mov r8,[rbp-50]
+76CAB401908: 4D 85 C0                       - test r8,r8
+76CAB40190B: 75 1E                          - jne rouste
+76CAB40190D: 48 83 EC 08                    - sub rsp,08
+76CAB401911: 68 E1 74 D9 18                 - push 18D974E1
+76CAB401916: 48 B8 C0 1B F0 A9 6C 07 00 00  - mov rax,0000076CA9F01BC0
+76CAB401920: 48 83 EC 20                    - sub rsp,20
+76CAB401924: FF D0                          - call rax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28669</ID>
+              <Description>"Rouste Score"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>ptr_rouste</Address>
+              <Offsets>
+                <Offset>10</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28670</ID>
+              <Description>"Rouste Score"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>ptr_rouste</Address>
+              <Offsets>
+                <Offset>10</Offset>
+                <Offset>1*8+18</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28671</ID>
+          <Description>"No Fatigue"</Description>
+          <Color>3943EE</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return "define(address,1)" end
+local memscan = createMemScan()
+local found = createFoundList(memscan)
+local bytes = "F2 48 0F 59 ?? F2 48 0F 11 ?? ?? ?? ?? ?? F2 48 0F 10 ?? ?? ?? ?? ?? F2 48 0F 58 ?? F2 48 0F 11 ?? ?? ?? ?? ?? 48 8B ?? ?? F2 48 0F 10 ?? 48 83"
+local start = 0x000000000000
+local stop  = 0x7FFFFFFFFFFF
+memscan.firstScan(
+  soExactValue, vtByteArray, rtRounded,
+  bytes, nil, start, stop, "+X-C+W",
+  fsmNotAligned, "1", true, false, false, false)
+memscan.waitTillDone()
+found.initialize()
+local count = found.Count
+local address = nil
+if count &gt; 0 then
+  address = found.Address[0]
+end
+memscan.Destroy()
+memscan = nil
+assert(count &gt; 0, "Unable to find array of bytes.")
+return "define(address," .. address .. ")"
+{$asm}
+label(fatigue)
+//aobscan(fatigue,F2 48 0F 59 ?? F2 48 0F 11 ?? ?? ?? ?? ?? F2 48 0F 10 ?? ?? ?? ?? ?? F2 48 0F 58 ?? F2 48 0F 11 ?? ?? ?? ?? ?? 48 8B ?? ?? F2 48 0F 10 ?? 48 83)
+address+17:
+fatigue:
+  db 0F 57 D2 90 90
+registersymbol(fatigue)
+
+[DISABLE]
+fatigue:
+  db F2 48 0F 58 D1
+unregistersymbol(fatigue)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA0003466
+
+76CAA0003428: 49 8B CB                       - mov rcx,r11
+76CAA000342B: 48 83 EC 20                    - sub rsp,20
+76CAA000342F: E8 EC F7 FE FF                 - call 76CA9FFF2C20
+76CAA0003434: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA0003439: 48 83 C4 20                    - add rsp,20
+76CAA000343D: F2 48 0F 11 85 30 FF FF FF     - movsd [rbp-000000D0],xmm0
+76CAA0003446: F2 48 0F 10 8D 60 FF FF FF     - movsd xmm1,[rbp-000000A0]
+76CAA000344F: F2 48 0F 59 C8                 - mulsd xmm1,xmm0
+76CAA0003454: F2 48 0F 11 8D 38 FF FF FF     - movsd [rbp-000000C8],xmm1
+76CAA000345D: F2 48 0F 10 95 58 FF FF FF     - movsd xmm2,[rbp-000000A8]
+// ---------- INJECTING HERE ----------
+76CAA0003466: F2 48 0F 58 D1                 - addsd xmm2,xmm1
+// ---------- DONE INJECTING  ----------
+76CAA000346B: F2 48 0F 11 95 58 FF FF FF     - movsd [rbp-000000A8],xmm2
+76CAA0003474: 48 8B 4D 10                    - mov rcx,[rbp+10]
+76CAA0003478: F2 48 0F 10 CA                 - movsd xmm1,xmm2
+76CAA000347D: 48 83 EC 20                    - sub rsp,20
+76CAA0003481: E8 4A 73 00 00                 - call 76CAA000A7D0
+76CAA0003486: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA000348B: 48 83 C4 20                    - add rsp,20
+76CAA000348F: F2 48 0F 11 85 58 FF FF FF     - movsd [rbp-000000A8],xmm0
+76CAA0003498: 49 B8 B8 2A 1E 99 0B 02 00 00  - mov r8,0000020B991E2AB8
+76CAA00034A2: 4D 8B 08                       - mov r9,[r8]
+}
+
+{
+76CAA000A88B - 48 B8 F062EBD2FD7F0000 - mov rax,libhl.hl_math_floor
+76CAA000A895 - 48 83 EC 20           - sub rsp,20
+76CAA000A899 - FF D0                 - call rax
+76CAA000A89B - 48 89 6C 24 F8        - mov [rsp-08],rbp
+76CAA000A8A0 - 48 83 C4 20           - add rsp,20
+76CAA000A8A4 - 89 45 EC              - mov [rbp-14],eax
+76CAA000A8A7 - F2 0F2A C0            - cvtsi2sd xmm0,eax
+76CAA000A8AB - F2 48 0F11 45 F8      - movsd [rbp-08],xmm0
+76CAA000A8B1 - 48 8B 4D 10           - mov rcx,[rbp+10]
+76CAA000A8B5 - F2 48 0F11 81 20010000  - movsd [rcx+00000120],xmm0
+76CAA000A8BE - B8 01000000           - mov eax,00000001
+76CAA000A8C3 - 89 45 EC              - mov [rbp-14],eax
+76CAA000A8C6 - 8B D0                 - mov edx,eax
+76CAA000A8C8 - 48 83 EC 20           - sub rsp,20
+76CAA000A8CC - E8 5FAE12FF           - call 76CA9F135730
+76CAA000A8D1 - 48 89 6C 24 F8        - mov [rsp-08],rbp
+76CAA000A8D6 - 48 83 C4 20           - add rsp,20
+76CAA000A8DA - 48 8B 4D 10           - mov rcx,[rbp+10]
+76CAA000A8DE - F2 48 0F10 5D 18      - movsd xmm3,[rbp+18]
+// ---------- INJECTING HERE ----------
+76CAA000A8E4 - F2 48 0F11 59 48      - movsd [rcx+48],xmm3
+// ---------- DONE INJECTING  ----------
+76CAA000A8EA - F2 48 0F10 C3         - movsd xmm0,xmm3
+76CAA000A8EF - 48 83 C4 20           - add rsp,20
+76CAA000A8F3 - 5D                    - pop rbp
+76CAA000A8F4 - 48 C3                 - ret
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>27968</ID>
+          <Description>"No Item Weight"</Description>
+          <Color>3943EE</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return "define(address,1)" end
+local memscan = createMemScan()
+local found = createFoundList(memscan)
+local bytes = "8B ?? ?? F2 0F 2A D0 F2 48 0F 11 ?? ?? ?? 8B ?? ?? ?? 85"
+local start = 0x000000000000
+local stop  = 0x7FFFFFFFFFFF
+memscan.firstScan(
+  soExactValue, vtByteArray, rtRounded,
+  bytes, nil, start, stop, "+X-C+W",
+  fsmNotAligned, "1", true, false, false, false)
+memscan.waitTillDone()
+found.initialize()
+local count = found.Count
+local address = nil
+if count &gt; 0 then
+  address = found.Address[0]
+end
+memscan.Destroy()
+memscan = nil
+assert(count &gt; 0, "Unable to find array of bytes.")
+return "define(address," .. address .. ")"
+{$asm}
+label(itemWeight)
+alloc(itemWeightBkp,3)
+itemWeightBkp:
+  readmem(address,3)
+address:
+itemWeight:
+  xor rax,rax
+registersymbol(itemWeight)
+registersymbol(itemWeightBkp)
+
+[DISABLE]
+itemWeight:
+  readmem(itemWeightBkp,3)
+unregistersymbol(itemWeight)
+unregistersymbol(itemWeightBkp)
+dealloc(itemWeightBkp)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA05F40F1
+
+76CAA05F40C5: 41 B9 03 00 00 00              - mov r9d,00000003
+76CAA05F40CB: 44 89 4D F8                    - mov [rbp-08],r9d
+76CAA05F40CF: 41 8B C9                       - mov ecx,r9d
+76CAA05F40D2: 44 8B 55 FC                    - mov r10d,[rbp-04]
+76CAA05F40D6: 41 D3 E2                       - shl r10d,cl
+76CAA05F40D9: 44 89 55 F8                    - mov [rbp-08],r10d
+76CAA05F40DD: 49 C1 E2 20                    - shl r10,20
+76CAA05F40E1: 49 C1 EA 20                    - shr r10,20
+76CAA05F40E5: F2 4B 0F 10 04 10              - movsd xmm0,[r8+r10]
+76CAA05F40EB: F2 48 0F 11 45 E8              - movsd [rbp-18],xmm0
+// ---------- INJECTING HERE ----------
+76CAA05F40F1: 8B 45 20                       - mov eax,[rbp+20]
+// ---------- DONE INJECTING  ----------
+76CAA05F40F4: F2 0F 2A D0                    - cvtsi2sd xmm2,eax
+76CAA05F40F8: F2 48 0F 11 55 E0              - movsd [rbp-20],xmm2
+76CAA05F40FE: 4C 8B 4D 18                    - mov r9,[rbp+18]
+76CAA05F4102: 4D 85 C9                       - test r9,r9
+76CAA05F4105: 75 1E                          - jne 76CAA05F4125
+76CAA05F4107: 48 83 EC 08                    - sub rsp,08
+76CAA05F410B: 68 E1 0C 50 00                 - push 00500CE1
+76CAA05F4110: 48 B8 E0 1B 00 9F CA 76 00 00  - mov rax,000076CA9F001BE0
+76CAA05F411A: 48 83 EC 20                    - sub rsp,20
+76CAA05F411E: FF D0                          - call rax
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28722</ID>
+          <Description>"Ignore This"</Description>
+          <Options moHideChildren="1"/>
+          <Color>808080</Color>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28419</ID>
+              <Description>"Stuff Pointers 1"</Description>
+              <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+
+aobscanregion(stuffptrs2,startaddy1,startaddy1+1fff0000,48 8B 4C D0 18 48 89 4D C8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?  ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?  ? ? ? ? ? ? ? ? ? ? 0F 84 3C 03 00 00)
+
+registersymbol(stuffptrs2)
+alloc(newmem,$1000,stuffptrs2)
+
+registersymbol(StuffPtrAry)
+label(StuffPtrAry)
+label(return)
+
+newmem:
+  mov rcx,[rax+rdx*8+18]
+lea rax,[rax]
+cmp dword ptr[rsp+d0],zx3
+jne short @f
+mov [StuffPtrAry+8],rax
+jmp return
+@@:
+mov [StuffPtrAry],rax
+@@:
+jmp return
+align 8
+StuffPtrAry:
+dq 0
+
+
+stuffptrs2:
+  jmp newmem
+return:
+
+[DISABLE]
+
+stuffptrs2:
+  db 48 8B 4C D0 18
+
+unregistersymbol(StuffPtrAry)
+unregistersymbol(stuffptrs2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9FB2710B
+
+76CA9FB270E4: 45 3B C1                       - cmp r8d,r9d
+76CA9FB270E7: 0F 82 0C 00 00 00              - jb 76CA9FB270F9
+76CA9FB270ED: 4D 33 D2                       - xor r10,r10
+76CA9FB270F0: 4C 89 55 D0                    - mov [rbp-30],r10
+76CA9FB270F4: E9 45 00 00 00                 - jmp 76CA9FB2713E
+76CA9FB270F9: 4C 8B 5D E8                    - mov r11,[rbp-18]
+76CA9FB270FD: 49 8B 43 10                    - mov rax,[r11+10]
+76CA9FB27101: 48 89 45 C0                    - mov [rbp-40],rax
+76CA9FB27105: 48 33 D2                       - xor rdx,rdx
+76CA9FB27108: 8B 55 DC                       - mov edx,[rbp-24]
+// ---------- INJECTING HERE ----------
+76CA9FB2710B: 48 8B 4C D0 18                 - mov rcx,[rax+rdx*8+18]
+// ---------- DONE INJECTING  ----------
+76CA9FB27110: 48 89 4D C8                    - mov [rbp-38],rcx
+76CA9FB27114: 48 8B D1                       - mov rdx,rcx
+76CA9FB27117: 48 B9 F8 D8 5D 76 BF 01 00 00  - mov rcx,000001BF765DD8F8
+76CA9FB27121: 48 B8 70 06 E7 8A FF 7F 00 00  - mov rax,libhl.hl_to_virtual
+76CA9FB2712B: 48 83 EC 20                    - sub rsp,20
+76CA9FB2712F: FF D0                          - call rax
+76CA9FB27131: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9FB27136: 48 83 C4 20                    - add rsp,20
+76CA9FB2713A: 48 89 45 D0                    - mov [rbp-30],rax
+76CA9FB2713E: 4C 8B 45 D0                    - mov r8,[rbp-30]
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28420</ID>
+                  <Description>"-&gt;"</Description>
+                  <Options moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>StuffPtrAry</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>28508</ID>
+                      <Description>"Krowns"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28421</ID>
+                      <Description>"enc"</Description>
+                      <Options moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>28509</ID>
+                          <Description>"Influence"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Custom</VariableType>
+                          <CustomType>Wartales</CustomType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28528</ID>
+                      <Description>"No description"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28618</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28619</ID>
+                      <Description>"No description"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+10</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28620</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+10</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28621</ID>
+                      <Description>"No description"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28622</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28623</ID>
+                      <Description>"No description"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+20</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28624</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+20</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28426</ID>
+                  <Description>"Inventory,   ] to search more,   [ to go back"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>StuffPtrAry+8</Address>
+                  <Hotkeys>
+                    <Hotkey>
+                      <Action>Increase Value</Action>
+                      <Keys>
+                        <Key>221</Key>
+                      </Keys>
+                      <Value>48</Value>
+                      <ID>0</ID>
+                    </Hotkey>
+                    <Hotkey>
+                      <Action>Decrease Value</Action>
+                      <Keys>
+                        <Key>219</Key>
+                      </Keys>
+                      <Value>48</Value>
+                      <ID>1</ID>
+                    </Hotkey>
+                  </Hotkeys>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>28432</ID>
+                      <Description>"1 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28608</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28431</ID>
+                      <Description>"2 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28609</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28430</ID>
+                      <Description>"3 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28610</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28429</ID>
+                      <Description>"4 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>30</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28611</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>30</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28428</ID>
+                      <Description>"5 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>38</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28612</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>38</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28427</ID>
+                      <Description>"6 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>40</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28613</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>40</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28435</ID>
+                      <Description>"7 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>48</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28614</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>48</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28436</ID>
+                      <Description>"8 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>50</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28615</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>50</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28433</ID>
+                      <Description>"9 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>58</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28616</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>58</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28434</ID>
+                      <Description>"10 -&gt;"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28617</ID>
+                      <Description>"enc"</Description>
+                      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28723</ID>
+              <Description>"dropOne"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobscan(dropOne,A0 4D 8B 4A 20 4D 85 C9 75 36 4C)
+alloc(newmem,$1000,dropOne)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  mov r9,[r10+20]
+  test r9,r9
+  jmp return
+
+dropOne+01:
+  jmp newmem
+  nop 2
+return:
+registersymbol(dropOne)
+
+[DISABLE]
+dropOne+01:
+  db 4D 8B 4A 20 4D 85 C9
+unregistersymbol(dropOne)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9F5CA219
+
+76CA9F5CA1F2: 49 8B CA                       - mov rcx,r10
+76CA9F5CA1F5: 48 B8 E0 9C 49 C8 FD 7F 00 00  - mov rax,libhl.hl_dyn_seti
+76CA9F5CA1FF: 48 83 EC 20                    - sub rsp,20
+76CA9F5CA203: FF D0                          - call rax
+76CA9F5CA205: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9F5CA20A: 48 83 C4 20                    - add rsp,20
+76CA9F5CA20E: EB 05                          - jmp 76CA9F5CA215
+76CA9F5CA210: 8B 55 90                       - mov edx,[rbp-70]
+76CA9F5CA213: 89 11                          - mov [rcx],edx
+76CA9F5CA215: 4C 8B 55 A0                    - mov r10,[rbp-60]
+// ---------- INJECTING HERE ----------
+76CA9F5CA219: 4D 8B 4A 20                    - mov r9,[r10+20]
+// ---------- DONE INJECTING  ----------
+76CA9F5CA21D: 4D 85 C9                       - test r9,r9
+76CA9F5CA220: 75 36                          - jne 76CA9F5CA258
+76CA9F5CA222: 4C 8B 4D 94                    - mov r9,[rbp-6C]
+76CA9F5CA226: 49 B8 F8 00 6A 11 CD 01 00 00  - mov r8,000001CD116A00F8
+76CA9F5CA230: 48 BA D9 45 63 0A 00 00 00 00  - mov rdx,000000000A6345D9
+76CA9F5CA23A: 49 8B CA                       - mov rcx,r10
+76CA9F5CA23D: 48 B8 E0 9C 49 C8 FD 7F 00 00  - mov rax,libhl.hl_dyn_seti
+76CA9F5CA247: 48 83 EC 20                    - sub rsp,20
+76CA9F5CA24B: FF D0                          - call rax
+76CA9F5CA24D: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28724</ID>
+              <Description>"encrypt"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobscan(encrypt,41 BB 1F 00 00 00 44 89 5D F4)
+registersymbol(encrypt)
+
+[DISABLE]
+unregistersymbol(encrypt)
+
+{
+76CA9F52C4E9 - 48 B8 E09449C8FD7F0000 - mov rax,libhl.hl_dyn_geti
+76CA9F52C4F3 - 48 83 EC 20           - sub rsp,20
+76CA9F52C4F7 - FF D0                 - call rax
+76CA9F52C4F9 - 48 89 6C 24 F8        - mov [rsp-08],rbp
+76CA9F52C4FE - 48 83 C4 20           - add rsp,20
+76CA9F52C502 - 89 45 F8              - mov [rbp-08],eax
+76CA9F52C505 - EB 07                 - jmp 76CA9F52C50E
+76CA9F52C507 - 45 8B 19              - mov r11d,[r9]
+76CA9F52C50A - 44 89 5D F8           - mov [rbp-08],r11d
+// ----- MULTIPLY VALUE -----
+76CA9F52C50E - 41 BB 1F000000        - mov r11d,0000001F
+// --------------------------
+76CA9F52C514 - 44 89 5D F4           - mov [rbp-0C],r11d
+76CA9F52C518 - 8B 45 F8              - mov eax,[rbp-08]
+76CA9F52C51B - 41 0FAF C3            - imul eax,r11d
+76CA9F52C51F - 89 45 F8              - mov [rbp-08],eax
+// ----- ENCODE VALUE -----
+76CA9F52C522 - 41 BB 6DDB625B        - mov r11d,5B62DB6D
+// ------------------------
+76CA9F52C528 - 44 89 5D F4           - mov [rbp-0C],r11d
+76CA9F52C52C - 41 33 C3              - xor eax,r11d
+76CA9F52C52F - 89 45 F8              - mov [rbp-08],eax
+76CA9F52C532 - 8B 4D FC              - mov ecx,[rbp-04]
+76CA9F52C535 - 3B C8                 - cmp ecx,eax
+76CA9F52C537 - 0F84 EF020000         - je 76CA9F52C82C
+76CA9F52C53D - 4C 8B 55 10           - mov r10,[rbp+10]
+76CA9F52C541 - 4D 8B 42 18           - mov r8,[r10+18]
+76CA9F52C545 - 4D 85 C0              - test r8,r8
+76CA9F52C548 - 75 35                 - jne 76CA9F52C57F
+76CA9F52C54A - 49 B8 F8006A11CD010000 - mov r8,000001CD116A00F8
+76CA9F52C554 - 48 BA 267A4B0000000000 - mov rdx,00000000004B7A26
+76CA9F52C55E - 49 8B CA              - mov rcx,r10
+76CA9F52C561 - 48 B8 E09449C8FD7F0000 - mov rax,libhl.hl_dyn_geti
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28725</ID>
+              <Description>"bonusAttributes"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobscan(bonusAttributes,45 8B 50 24 44 89 55 AC)
+registersymbol(bonusAttributes)
+
+[DISABLE]
+unregistersymbol(bonusAttributes)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9FF279E6
+
+76CA9FF279BE: 4D 85 C0                       - test r8,r8
+76CA9FF279C1: 75 1B                          - jne 76CA9FF279DE
+76CA9FF279C3: 48 83 EC 08                    - sub rsp,08
+76CA9FF279C7: 6A 61                          - push 61
+76CA9FF279C9: 48 B8 20 1A 00 9F CA 76 00 00  - mov rax,000076CA9F001A20
+76CA9FF279D3: 48 83 EC 20                    - sub rsp,20
+76CA9FF279D7: FF D0                          - call rax
+76CA9FF279D9: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9FF279DE: 4D 8B 48 18                    - mov r9,[r8+18]
+76CA9FF279E2: 4C 89 4D 80                    - mov [rbp-80],r9
+// ---------- INJECTING HERE ----------
+76CA9FF279E6: 45 8B 50 24                    - mov r10d,[r8+24]
+// ---------- DONE INJECTING  ----------
+76CA9FF279EA: 44 89 55 AC                    - mov [rbp-54],r10d
+76CA9FF279EE: 49 BB E0 D2 D7 55 39 02 00 00  - mov r11,0000023955D7D2E0
+76CA9FF279F8: 49 8B 03                       - mov rax,[r11]
+76CA9FF279FB: 48 89 85 58 FF FF FF           - mov [rbp-000000A8],rax
+76CA9FF27A02: 48 33 C9                       - xor rcx,rcx
+76CA9FF27A05: 48 89 8D 70 FF FF FF           - mov [rbp-00000090],rcx
+76CA9FF27A0C: 48 8B 4D 10                    - mov rcx,[rbp+10]
+76CA9FF27A10: 49 8B D1                       - mov rdx,r9
+76CA9FF27A13: 45 8B C2                       - mov r8d,r10d
+76CA9FF27A16: 4C 8B C8                       - mov r9,rax
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28726</ID>
+              <Description>"readValue"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobscan(readValue,8B 11 89 55 FC 4C 8B 55)
+alloc(newmem,$1000,readValue)
+
+label(code)
+label(return)
+
+newmem:
+  mov rdx,20C3463C220
+  cmp rdx,rcx
+  jne @f
+  mov rdx,[rsp+78]
+  lea rdx,[rdx]
+  mov r9,76CA9F5E49B6
+  cmp r9,rdx
+  jne @f
+  nop
+@@:
+  mov rdx,[rsp+78]
+  lea rdx,[rdx]
+  xor rdx,rdx
+code:
+  mov edx,[rcx]
+  mov [rbp-04],edx
+  jmp return
+
+readValue:
+  jmp newmem
+return:
+registersymbol(readValue)
+
+[DISABLE]
+readValue:
+  db 8B 11 89 55 FC
+unregistersymbol(readValue)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9F52C4C0
+
+76CA9F52C48B: 49 B8 F8 00 0A 96 0B 02 00 00  - mov r8,0000020B960A00F8
+76CA9F52C495: 48 BA 26 7A 4B 00 00 00 00 00  - mov rdx,00000000004B7A26
+76CA9F52C49F: 48 8B C8                       - mov rcx,rax
+76CA9F52C4A2: 48 B8 E0 94 EB D2 FD 7F 00 00  - mov rax,libhl.hl_dyn_geti
+76CA9F52C4AC: 48 83 EC 20                    - sub rsp,20
+76CA9F52C4B0: FF D0                          - call rax
+76CA9F52C4B2: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9F52C4B7: 48 83 C4 20                    - add rsp,20
+76CA9F52C4BB: 89 45 FC                       - mov [rbp-04],eax
+76CA9F52C4BE: EB 05                          - jmp 76CA9F52C4C5
+// ---------- INJECTING HERE ----------
+76CA9F52C4C0: 8B 11                          - mov edx,[rcx]
+// ---------- DONE INJECTING  ----------
+76CA9F52C4C2: 89 55 FC                       - mov [rbp-04],edx
+76CA9F52C4C5: 4C 8B 55 10                    - mov r10,[rbp+10]
+76CA9F52C4C9: 4D 8B 4A 20                    - mov r9,[r10+20]
+76CA9F52C4CD: 4D 85 C9                       - test r9,r9
+76CA9F52C4D0: 75 35                          - jne 76CA9F52C507
+76CA9F52C4D2: 49 B8 F8 00 0A 96 0B 02 00 00  - mov r8,0000020B960A00F8
+76CA9F52C4DC: 48 BA D9 45 63 0A 00 00 00 00  - mov rdx,000000000A6345D9
+76CA9F52C4E6: 49 8B CA                       - mov rcx,r10
+76CA9F52C4E9: 48 B8 E0 94 EB D2 FD 7F 00 00  - mov rax,libhl.hl_dyn_geti
+76CA9F52C4F3: 48 83 EC 20                    - sub rsp,20
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28727</ID>
+              <Description>"addResource"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobscan(addResource,41 03 C0 89 ?? ?? 49 B9 ?? ?? ?? ?? ?? ?? ?? ?? ?? 8B)
+alloc(newmem,$1000,addResource)
+
+label(code)
+label(return)
+
+newmem:
+  add eax,#1000
+code:
+  add eax,r8d
+  mov [rbp-54],eax
+  jmp return
+
+addResource:
+  jmp newmem
+  nop
+return:
+registersymbol(addResource)
+
+[DISABLE]
+
+addResource:
+  db 41 03 C0 89 45 AC
+
+unregistersymbol(addResource)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9F5E49D8
+
+76CA9F5E49B6: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9F5E49BB: 48 83 C4 20                    - add rsp,20
+76CA9F5E49BF: 89 45 AC                       - mov [rbp-54],eax
+76CA9F5E49C2: 4C 8B 45 20                    - mov r8,[rbp+20]
+76CA9F5E49C6: 4D 85 C0                       - test r8,r8
+76CA9F5E49C9: 74 06                          - je 76CA9F5E49D1
+76CA9F5E49CB: 4D 8B 40 08                    - mov r8,[r8+08]
+76CA9F5E49CF: EB 03                          - jmp 76CA9F5E49D4
+76CA9F5E49D1: 4D 33 C0                       - xor r8,r8
+76CA9F5E49D4: 44 89 45 A8                    - mov [rbp-58],r8d
+// ---------- INJECTING HERE ----------
+76CA9F5E49D8: 41 03 C0                       - add eax,r8d
+// ---------- DONE INJECTING  ----------
+76CA9F5E49DB: 89 45 AC                       - mov [rbp-54],eax
+76CA9F5E49DE: 49 B9 B8 7A 31 85 1A 02 00 00  - mov r9,0000021A85317AB8
+76CA9F5E49E8: 4D 8B 11                       - mov r10,[r9]
+76CA9F5E49EB: 4C 89 95 70 FF FF FF           - mov [rbp-00000090],r10
+76CA9F5E49F2: 4D 8B 5A 48                    - mov r11,[r10+48]
+76CA9F5E49F6: 4C 89 9D 78 FF FF FF           - mov [rbp-00000088],r11
+76CA9F5E49FD: 4D 85 DB                       - test r11,r11
+76CA9F5E4A00: 75 1E                          - jne 76CA9F5E4A20
+76CA9F5E4A02: 48 83 EC 08                    - sub rsp,08
+76CA9F5E4A06: 68 7C A5 DD 1D                 - push 1DDDA57C
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28728</ID>
+              <Description>"lectern"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobscan(lectern,B7 FF 48 89 6C 24 F8 48 83 C4 20 48 8B 55 10 44 8B 45 18 44 89 42 70)
+alloc(newmem,$1000,lectern)
+
+label(code)
+label(return)
+
+newmem:
+  mov r8d,7
+code:
+  //mov r8d,[rbp+18]
+  mov [rdx+70],r8d
+  jmp return
+
+lectern+0F:
+  jmp newmem
+  nop 3
+return:
+registersymbol(lectern)
+
+[DISABLE]
+lectern+0F:
+  db 44 8B 45 18 44 89 42 70
+unregistersymbol(lectern)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9F5BF9E0
+
+76CA9F5BF9B5: 3B C2              - cmp eax,edx
+76CA9F5BF9B7: 0F 84 1F 00 00 00  - je 76CA9F5BF9DC
+76CA9F5BF9BD: 41 B8 05 00 00 00  - mov r8d,00000005
+76CA9F5BF9C3: 44 89 45 FC        - mov [rbp-04],r8d
+76CA9F5BF9C7: 41 8B D0           - mov edx,r8d
+76CA9F5BF9CA: 48 83 EC 20        - sub rsp,20
+76CA9F5BF9CE: E8 5D 5D B7 FF     - call 76CA9F135730
+76CA9F5BF9D3: 48 89 6C 24 F8     - mov [rsp-08],rbp
+76CA9F5BF9D8: 48 83 C4 20        - add rsp,20
+76CA9F5BF9DC: 48 8B 55 10        - mov rdx,[rbp+10]
+// ---------- INJECTING HERE ----------
+76CA9F5BF9E0: 44 8B 45 18        - mov r8d,[rbp+18]
+// ---------- DONE INJECTING  ----------
+76CA9F5BF9E4: 44 89 42 70        - mov [rdx+70],r8d
+76CA9F5BF9E8: 49 8B C0           - mov rax,r8
+76CA9F5BF9EB: 48 83 C4 10        - add rsp,10
+76CA9F5BF9EF: 5D                 - pop rbp
+76CA9F5BF9F0: 48 C3              - ret 
+76CA9F5BF9F2: 90                 - nop 
+76CA9F5BF9F3: 90                 - nop 
+76CA9F5BF9F4: 90                 - nop 
+76CA9F5BF9F5: 90                 - nop 
+76CA9F5BF9F6: 90                 - nop 
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28729</ID>
+              <Description>"Has Level Requirement"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobscan(hasLevel,E9 0A 00 00 00 41 ?? 01 00 00 00 44 88 ?? ?? 48 8B ?? ?? ?? ?? ?? 48 8B ?? ?? 48 85)
+hasLevel:
+  nop 5
+registersymbol(hasLevel)
+
+[DISABLE]
+hasLevel:
+  db E9 0A 00 00 00
+unregistersymbol(hasLevel)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9F5851C9
+
+76CA9F5851A7: 4D 85 C9                       - test r9,r9
+76CA9F5851AA: 74 06                          - je 76CA9F5851B2
+76CA9F5851AC: 4D 8B 49 08                    - mov r9,[r9+08]
+76CA9F5851B0: EB 03                          - jmp 76CA9F5851B5
+76CA9F5851B2: 4D 33 C9                       - xor r9,r9
+76CA9F5851B5: 44 89 4D 9C                    - mov [rbp-64],r9d
+76CA9F5851B9: 45 3B C1                       - cmp r8d,r9d
+76CA9F5851BC: 0F 8D 0C 00 00 00              - jnl 76CA9F5851CE
+76CA9F5851C2: 45 33 D2                       - xor r10d,r10d
+76CA9F5851C5: 44 88 55 BB                    - mov [rbp-45],r10l
+// ---------- INJECTING HERE ----------
+76CA9F5851C9: E9 0A 00 00 00                 - jmp 76CA9F5851D8
+// ---------- DONE INJECTING  ----------
+76CA9F5851CE: 41 BB 01 00 00 00              - mov r11d,00000001
+76CA9F5851D4: 44 88 5D BB                    - mov [rbp-45],r11l
+76CA9F5851D8: 48 8B 85 F8 FE FF FF           - mov rax,[rbp-00000108]
+76CA9F5851DF: 48 8B 48 18                    - mov rcx,[rax+18]
+76CA9F5851E3: 48 85 C9                       - test rcx,rcx
+76CA9F5851E6: 75 3B                          - jne 76CA9F585223
+76CA9F5851E8: 48 33 D2                       - xor rdx,rdx
+76CA9F5851EB: 8A 55 BB                       - mov dl,[rbp-45]
+76CA9F5851EE: 4C 8B CA                       - mov r9,rdx
+76CA9F5851F1: 49 B8 78 01 B0 DB EB 01 00 00  - mov r8,000001EBDBB00178
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28730</ID>
+              <Description>"resources"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+aobscan(resources,78 FF FF FF 4C 8B 42 10 4C 89 85 50 FF FF FF)
+alloc(newmem,$1000,resources)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  mov r8,[rdx+10]
+  mov [rbp-000000B0],r8
+  jmp return
+
+resources+04:
+  jmp newmem
+  nop 6
+return:
+registersymbol(resources)
+
+[DISABLE]
+
+resources+04:
+  db 4C 8B 42 10 4C 89 85 50 FF FF FF
+
+unregistersymbol(resources)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA04C8C6D
+
+76CAA04C8C3A: 44 89 9D 6C FF FF FF           - mov [rbp-00000094],r11d
+76CAA04C8C41: FF 45 A4                       - inc [rbp-5C]
+76CAA04C8C44: 41 8B 42 08                    - mov eax,[r10+08]
+76CAA04C8C48: 89 85 68 FF FF FF              - mov [rbp-00000098],eax
+76CAA04C8C4E: 44 3B D8                       - cmp r11d,eax
+76CAA04C8C51: 0F 82 0F 00 00 00              - jb 76CAA04C8C66
+76CAA04C8C57: 48 33 C9                       - xor rcx,rcx
+76CAA04C8C5A: 48 89 8D 60 FF FF FF           - mov [rbp-000000A0],rcx
+76CAA04C8C61: E9 55 00 00 00                 - jmp 76CAA04C8CBB
+76CAA04C8C66: 48 8B 95 78 FF FF FF           - mov rdx,[rbp-00000088]
+// ---------- INJECTING HERE ----------
+76CAA04C8C6D: 4C 8B 42 10                    - mov r8,[rdx+10]
+// ---------- DONE INJECTING  ----------
+76CAA04C8C71: 4C 89 85 50 FF FF FF           - mov [rbp-000000B0],r8
+76CAA04C8C78: 4D 33 D2                       - xor r10,r10
+76CAA04C8C7B: 44 8B 95 6C FF FF FF           - mov r10d,[rbp-00000094]
+76CAA04C8C82: 4F 8B 4C D0 18                 - mov r9,[r8+r10*8+18]
+76CAA04C8C87: 4C 89 8D 58 FF FF FF           - mov [rbp-000000A8],r9
+76CAA04C8C8E: 49 8B D1                       - mov rdx,r9
+76CAA04C8C91: 48 B9 38 BC 24 3E F9 01 00 00  - mov rcx,000001F93E24BC38
+76CAA04C8C9B: 48 B8 E0 93 0B 1A FE 7F 00 00  - mov rax,libhl.hl_to_virtual
+76CAA04C8CA5: 48 83 EC 20                    - sub rsp,20
+76CAA04C8CA9: FF D0                          - call rax
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28731</ID>
+              <Description>"No Wages"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobscan(wages,FF D0 48 89 ?? ?? ?? 8B ?? ?? ?? 00 00 89 ?? ?? 8B ?? ?? 03)
+alloc(newmem,$1000,wages)
+
+label(wagesBkp)
+label(return)
+
+newmem:
+wagesBkp:
+  readmem(wages+07,6)
+  test ecx,ecx
+  je return
+  xor ecx,ecx
+  db 89
+  readmem(wages+08,5)
+  jmp return
+
+wages+07:
+  jmp newmem
+  nop
+return:
+registersymbol(wages)
+registersymbol(wagesBkp)
+
+[DISABLE]
+wages+07:
+  readmem(wagesBkp,6)
+unregistersymbol(wages)
+unregistersymbol(wagesBkp)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA005D6D7
+
+76CAA005D6AA: FF 45 AC                       - inc [rbp-54]
+76CAA005D6AD: 48 8B 85 20 FF FF FF           - mov rax,[rbp-000000E0]
+76CAA005D6B4: 48 85 C0                       - test rax,rax
+76CAA005D6B7: 75 1E                          - jne 76CAA005D6D7
+76CAA005D6B9: 48 83 EC 08                    - sub rsp,08
+76CAA005D6BD: 68 E8 48 7D 03                 - push 037D48E8
+76CAA005D6C2: 48 B8 20 1A 00 9F CA 76 00 00  - mov rax,000076CA9F001A20
+76CAA005D6CC: 48 83 EC 20                    - sub rsp,20
+76CAA005D6D0: FF D0                          - call rax
+76CAA005D6D2: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+// ---------- INJECTING HERE ----------
+76CAA005D6D7: 8B 88 0C 01 00 00              - mov ecx,[rax+0000010C]
+// ---------- DONE INJECTING  ----------
+76CAA005D6DD: 89 4D A4                       - mov [rbp-5C],ecx
+76CAA005D6E0: 8B 55 C8                       - mov edx,[rbp-38]
+76CAA005D6E3: 03 D1                          - add edx,ecx
+76CAA005D6E5: 89 55 A8                       - mov [rbp-58],edx
+76CAA005D6E8: 89 55 C8                       - mov [rbp-38],edx
+76CAA005D6EB: E9 34 FF FF FF                 - jmp 76CAA005D624
+76CAA005D6F0: 48 B9 98 CB 27 82 1A 02 00 00  - mov rcx,0000021A8227CB98
+76CAA005D6FA: 48 B8 80 BD 18 D7 FD 7F 00 00  - mov rax,libhl.hl_alloc_virtual
+76CAA005D704: 48 83 EC 20                    - sub rsp,20
+76CAA005D708: FF D0                          - call rax
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28468</ID>
+              <Description>"Cursor Pointer"</Description>
+              <Options moHideChildren="1"/>
+              <Color>808080</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobScanRegion(cursor, 700000000000, 7FFFFFFFFFFF, 4C 8B ?? 4C 89 ?? D8 48 8B ?? ?? 48 B9)
+alloc(newmem,$1000,cursor)
+
+label(cursorBkp)
+label(cursorPtr)
+label(return)
+
+newmem:
+  mov rax,cursorPtr
+  mov [rax],rcx
+cursorBkp:
+  readmem(cursor,7)
+  jmp return
+
+align 10
+cursorPtr:
+  dq 0
+
+cursor:
+  jmp newmem
+  nop 2
+return:
+registersymbol(cursor)
+registersymbol(cursorBkp)
+registersymbol(cursorPtr)
+
+[DISABLE]
+cursor:
+  readmem(cursorBkp,7)
+unregistersymbol(cursor)
+unregistersymbol(cursorBkp)
+unregistersymbol(cursorPtr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA0064781
+
+76CAA006474B: 49 B8 38 58 6A 11 CD 01 00 00  - mov r8,000001CD116A5838
+76CAA0064755: 48 BA 1D C6 BF 05 00 00 00 00  - mov rdx,0000000005BFC61D
+76CAA006475F: 49 8B CA                       - mov rcx,r10
+76CAA0064762: 48 B8 E0 97 49 C8 FD 7F 00 00  - mov rax,libhl.hl_dyn_getp
+76CAA006476C: 48 83 EC 20                    - sub rsp,20
+76CAA0064770: FF D0                          - call rax
+76CAA0064772: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA0064777: 48 83 C4 20                    - add rsp,20
+76CAA006477B: 48 89 45 D8                    - mov [rbp-28],rax
+76CAA006477F: EB 07                          - jmp 76CAA0064788
+// ---------- INJECTING HERE ----------
+76CAA0064781: 4C 8B 19                       - mov r11,[rcx]
+// ---------- DONE INJECTING  ----------
+76CAA0064784: 4C 89 5D D8                    - mov [rbp-28],r11
+76CAA0064788: 48 8B 55 D8                    - mov rdx,[rbp-28]
+76CAA006478C: 48 B9 F8 80 6B 11 CD 01 00 00  - mov rcx,000001CD116B80F8
+76CAA0064796: 48 B8 50 84 49 C8 FD 7F 00 00  - mov rax,libhl.hl_to_virtual
+76CAA00647A0: 48 83 EC 20                    - sub rsp,20
+76CAA00647A4: FF D0                          - call rax
+76CAA00647A6: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA00647AB: 48 83 C4 20                    - add rsp,20
+76CAA00647AF: 48 89 45 C8                    - mov [rbp-38],rax
+76CAA00647B3: 48 83 C4 60                    - add rsp,60
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28469</ID>
+                  <Description>"Item Quantity"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>cursorPtr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28732</ID>
+              <Description>"No Wages (DOES NOT WORK)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobScanRegion(wages, 700000000000, 7FFFFFFFFFFF, FF D0 48 89 ?? ?? ?? 8B ?? ?? ?? 00 00 89 ?? ?? 8B ?? ?? 03)
+alloc(newmem,$1000,wages)
+
+label(wagesBkp)
+label(return)
+
+newmem:
+wagesBkp:
+  readmem(wages+07,6)
+  test ecx,ecx
+  je return
+  xor ecx,ecx
+  db 89
+  readmem(wages+08,5)
+  jmp return
+
+wages+07:
+  jmp newmem
+  nop
+return:
+registersymbol(wages)
+registersymbol(wagesBkp)
+
+[DISABLE]
+wages+07:
+  readmem(wagesBkp,6)
+unregistersymbol(wages)
+unregistersymbol(wagesBkp)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA005D6D7
+
+76CAA005D6AA: FF 45 AC                       - inc [rbp-54]
+76CAA005D6AD: 48 8B 85 20 FF FF FF           - mov rax,[rbp-000000E0]
+76CAA005D6B4: 48 85 C0                       - test rax,rax
+76CAA005D6B7: 75 1E                          - jne 76CAA005D6D7
+76CAA005D6B9: 48 83 EC 08                    - sub rsp,08
+76CAA005D6BD: 68 E8 48 7D 03                 - push 037D48E8
+76CAA005D6C2: 48 B8 20 1A 00 9F CA 76 00 00  - mov rax,000076CA9F001A20
+76CAA005D6CC: 48 83 EC 20                    - sub rsp,20
+76CAA005D6D0: FF D0                          - call rax
+76CAA005D6D2: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+// ---------- INJECTING HERE ----------
+76CAA005D6D7: 8B 88 0C 01 00 00              - mov ecx,[rax+0000010C]
+// ---------- DONE INJECTING  ----------
+76CAA005D6DD: 89 4D A4                       - mov [rbp-5C],ecx
+76CAA005D6E0: 8B 55 C8                       - mov edx,[rbp-38]
+76CAA005D6E3: 03 D1                          - add edx,ecx
+76CAA005D6E5: 89 55 A8                       - mov [rbp-58],edx
+76CAA005D6E8: 89 55 C8                       - mov [rbp-38],edx
+76CAA005D6EB: E9 34 FF FF FF                 - jmp 76CAA005D624
+76CAA005D6F0: 48 B9 98 CB 27 82 1A 02 00 00  - mov rcx,0000021A8227CB98
+76CAA005D6FA: 48 B8 80 BD 18 D7 FD 7F 00 00  - mov rax,libhl.hl_alloc_virtual
+76CAA005D704: 48 83 EC 20                    - sub rsp,20
+76CAA005D708: FF D0                          - call rax
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28470</ID>
+              <Description>"No Fatigue Loss  (DOES NOT WORK)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+aobScanRegion(fatigue, 700000000000, 7FFFFFFFFFFF, F2 48 0F 59 ?? F2 48 0F 11 ?? ?? ?? ?? ?? F2 48 0F 10 ?? ?? ?? ?? ?? F2 48 0F 58 ?? F2 48 0F 11 ?? ?? ?? ?? ?? 48 8B ?? ?? F2 48 0F 10 ?? 48 83)
+fatigue+17:
+  db 0F 57 D2 90 90
+registersymbol(fatigue)
+
+[DISABLE]
+fatigue+17:
+  db F2 48 0F 58 D1
+unregistersymbol(fatigue)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA0003466
+
+76CAA0003428: 49 8B CB                       - mov rcx,r11
+76CAA000342B: 48 83 EC 20                    - sub rsp,20
+76CAA000342F: E8 EC F7 FE FF                 - call 76CA9FFF2C20
+76CAA0003434: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA0003439: 48 83 C4 20                    - add rsp,20
+76CAA000343D: F2 48 0F 11 85 30 FF FF FF     - movsd [rbp-000000D0],xmm0
+76CAA0003446: F2 48 0F 10 8D 60 FF FF FF     - movsd xmm1,[rbp-000000A0]
+76CAA000344F: F2 48 0F 59 C8                 - mulsd xmm1,xmm0
+76CAA0003454: F2 48 0F 11 8D 38 FF FF FF     - movsd [rbp-000000C8],xmm1
+76CAA000345D: F2 48 0F 10 95 58 FF FF FF     - movsd xmm2,[rbp-000000A8]
+// ---------- INJECTING HERE ----------
+76CAA0003466: F2 48 0F 58 D1                 - addsd xmm2,xmm1
+// ---------- DONE INJECTING  ----------
+76CAA000346B: F2 48 0F 11 95 58 FF FF FF     - movsd [rbp-000000A8],xmm2
+76CAA0003474: 48 8B 4D 10                    - mov rcx,[rbp+10]
+76CAA0003478: F2 48 0F 10 CA                 - movsd xmm1,xmm2
+76CAA000347D: 48 83 EC 20                    - sub rsp,20
+76CAA0003481: E8 4A 73 00 00                 - call 76CAA000A7D0
+76CAA0003486: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA000348B: 48 83 C4 20                    - add rsp,20
+76CAA000348F: F2 48 0F 11 85 58 FF FF FF     - movsd [rbp-000000A8],xmm0
+76CAA0003498: 49 B8 B8 2A 1E 99 0B 02 00 00  - mov r8,0000020B991E2AB8
+76CAA00034A2: 4D 8B 08                       - mov r9,[r8]
+}
+
+{
+76CAA000A88B - 48 B8 F062EBD2FD7F0000 - mov rax,libhl.hl_math_floor
+76CAA000A895 - 48 83 EC 20           - sub rsp,20
+76CAA000A899 - FF D0                 - call rax
+76CAA000A89B - 48 89 6C 24 F8        - mov [rsp-08],rbp
+76CAA000A8A0 - 48 83 C4 20           - add rsp,20
+76CAA000A8A4 - 89 45 EC              - mov [rbp-14],eax
+76CAA000A8A7 - F2 0F2A C0            - cvtsi2sd xmm0,eax
+76CAA000A8AB - F2 48 0F11 45 F8      - movsd [rbp-08],xmm0
+76CAA000A8B1 - 48 8B 4D 10           - mov rcx,[rbp+10]
+76CAA000A8B5 - F2 48 0F11 81 20010000  - movsd [rcx+00000120],xmm0
+76CAA000A8BE - B8 01000000           - mov eax,00000001
+76CAA000A8C3 - 89 45 EC              - mov [rbp-14],eax
+76CAA000A8C6 - 8B D0                 - mov edx,eax
+76CAA000A8C8 - 48 83 EC 20           - sub rsp,20
+76CAA000A8CC - E8 5FAE12FF           - call 76CA9F135730
+76CAA000A8D1 - 48 89 6C 24 F8        - mov [rsp-08],rbp
+76CAA000A8D6 - 48 83 C4 20           - add rsp,20
+76CAA000A8DA - 48 8B 4D 10           - mov rcx,[rbp+10]
+76CAA000A8DE - F2 48 0F10 5D 18      - movsd xmm3,[rbp+18]
+// ---------- INJECTING HERE ----------
+76CAA000A8E4 - F2 48 0F11 59 48      - movsd [rcx+48],xmm3
+// ---------- DONE INJECTING  ----------
+76CAA000A8EA - F2 48 0F10 C3         - movsd xmm0,xmm3
+76CAA000A8EF - 48 83 C4 20           - add rsp,20
+76CAA000A8F3 - 5D                    - pop rbp
+76CAA000A8F4 - 48 C3                 - ret
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28733</ID>
+              <Description>"0-100 noise counter"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Double</VariableType>
+              <Address>31D3B8E8</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28734</ID>
+              <Description>"Rouste Script alternate (wait for first point)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Wartales.exe
+  Version: 
+  Date   : 2023-05-15
+  Author : SanitKa
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobScanRegion(rouste, 70000000000, 7FFFFFFFFFF,45 8B 48 10 44 89 4D C0 4C) // should be unique
+alloc(newmem,$1000,rouste)
+
+label(code)
+label(return)
+label(ptr_rouste)
+label(ptr_rouste2)
+
+newmem:
+  mov r9,[ptr_rouste]
+  cmp r9,r8              // r9 == r8
+  je code
+
+  test r9,r9             // r9 == 0, r9==0 &gt; zf=1, r9!=0 &gt; zf=0
+  jnz @f
+
+  mov [ptr_rouste],r8
+  jmp code
+
+@@:
+  mov [ptr_rouste2],r8
+//  jmp code
+
+code:
+  mov r9d,[r8+10]
+  mov [rbp-40],r9d
+  jmp return
+
+ptr_rouste:
+  dq 0
+
+ptr_rouste2:
+  dq 0
+
+rouste:
+  jmp newmem
+  nop 3
+return:
+registersymbol(rouste)
+registersymbol(ptr_rouste)
+registersymbol(ptr_rouste2)
+
+[DISABLE]
+
+rouste:
+  db 45 8B 48 10 44 89 4D C0
+
+unregistersymbol(rouste)
+unregistersymbol(ptr_rouste)
+unregistersymbol(ptr_rouste2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAB40192B
+
+76CAB401900: 48 89 4D B0                    - mov [rbp-50],rcx
+76CAB401904: 4C 8B 45 B0                    - mov r8,[rbp-50]
+76CAB401908: 4D 85 C0                       - test r8,r8
+76CAB40190B: 75 1E                          - jne 76CAB40192B
+76CAB40190D: 48 83 EC 08                    - sub rsp,08
+76CAB401911: 68 E1 74 D9 18                 - push 18D974E1
+76CAB401916: 48 B8 C0 1B F0 A9 6C 07 00 00  - mov rax,0000076CA9F01BC0
+76CAB401920: 48 83 EC 20                    - sub rsp,20
+76CAB401924: FF D0                          - call rax
+76CAB401926: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+// ---------- INJECTING HERE ----------
+76CAB40192B: 45 8B 48 10                    - mov r9d,[r8+10]
+// ---------- DONE INJECTING  ----------
+76CAB40192F: 44 89 4D C0                    - mov [rbp-40],r9d
+76CAB401933: 4C 8B 55 10                    - mov r10,[rbp+10]
+76CAB401937: 4D 8B 9A B0 02 00 00           - mov r11,[r10+000002B0]
+76CAB40193E: 4C 89 5D 98                    - mov [rbp-68],r11
+76CAB401942: 4D 85 DB                       - test r11,r11
+76CAB401945: 75 1E                          - jne 76CAB401965
+76CAB401947: 48 83 EC 08                    - sub rsp,08
+76CAB40194B: 68 57 93 07 FF                 - push FFFFFFFFFF079357
+76CAB401950: 48 B8 C0 1B F0 A9 6C 07 00 00  - mov rax,0000076CA9F01BC0
+76CAB40195A: 48 83 EC 20                    - sub rsp,20
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28735</ID>
+                  <Description>"Rouste Score"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ptr_rouste</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28736</ID>
+                  <Description>"Rouste Score"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ptr_rouste2</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28737</ID>
+              <Description>"xIncrease Carrying Capacity"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+AOBScanRegion(carry, regionStart, regionEnd, ?? 8B ?? ?? ?? 8B ?? ?? 89 ?? ?? 48 8B ?? ?? 89 81 ?? ?? 00 00 48 8B ?? ?? 48 83 ?? ?? ?? 48 C3)
+alloc(newmem,$100,carry)
+
+label(carryBkp)
+label(return)
+
+newmem:
+  mov eax,#1000000
+  readmem(carry+00,5)
+  db 89
+  readmem(carry+06,2)
+  jmp return
+carryBkp:
+  readmem(carry,8)
+  jmp return
+
+carry:
+  jmp newmem
+  nop 3
+return:
+registersymbol(carry)
+registersymbol(carryBkp)
+
+[DISABLE]
+carry:
+  readmem(carryBkp,8)
+unregistersymbol(carry)
+unregistersymbol(carryBkp)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA035FFC0
+
+76CAA035FF97: 48 89 6C 24 F8     - mov [rsp-08],rbp
+76CAA035FF9C: 48 83 C4 20        - add rsp,20
+76CAA035FFA0: 4D 33 C9           - xor r9,r9
+76CAA035FFA3: 44 8A 4D FF        - mov r9b,[rbp-01]
+76CAA035FFA7: 4D 84 C9           - test r9b,r9b
+76CAA035FFAA: 0F 84 25 00 00 00  - je 76CAA035FFD5
+76CAA035FFB0: 4D 33 D2           - xor r10,r10
+76CAA035FFB3: 44 8A 55 FE        - mov r10b,[rbp-02]
+76CAA035FFB7: 4D 84 D2           - test r10b,r10b
+76CAA035FFBA: 0F 84 15 00 00 00  - je 76CAA035FFD5
+// ---------- INJECTING HERE ----------
+76CAA035FFC0: 4C 8B 5D D8        - mov r11,[rbp-28]
+// ---------- DONE INJECTING  ----------
+76CAA035FFC4: 41 8B 43 44        - mov eax,[r11+44]
+76CAA035FFC8: 89 45 D4           - mov [rbp-2C],eax
+76CAA035FFCB: 48 8B 4D 10        - mov rcx,[rbp+10]
+76CAA035FFCF: 89 81 A0 01 00 00  - mov [rcx+000001A0],eax
+76CAA035FFD5: 48 8B 45 D8        - mov rax,[rbp-28]
+76CAA035FFD9: 48 83 C4 30        - add rsp,30
+76CAA035FFDD: 5D                 - pop rbp
+76CAA035FFDE: 48 C3              - ret 
+76CAA035FFE0: 55                 - push rbp
+76CAA035FFE1: 48 8B EC           - mov rbp,rsp
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28738</ID>
+              <Description>"Increase Carrying Capacity"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Wartales.exe
+  Version: 
+  Date   : 2023-10-12
+  Author : SanitKa
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobScanRegion(carryWeightS, regionStart, regionEnd,8B 51 44 89 55 D0) // should be unique
+alloc(newmem,$1000,carryWeightS)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  mov edx,[rcx+44]
+  cmp edx,7fff
+  jge @
+
+  shl edx,8                            // * 256
+  mov [rcx+44],edx                     // fix original calculated value
+  mov [r11+000001B0],edx               // fix companion value
+  mov eax,edx
+
+@:
+  mov [rbp-30],edx
+  jmp return
+
+carryWeightS:
+  jmp newmem
+  nop
+return:
+registersymbol(carryWeightS)
+
+[DISABLE]
+
+carryWeightS:
+  db 8B 51 44 89 55 D0
+
+unregistersymbol(carryWeightS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA04BB502
+
+76CAA04BB4D7: 4D 84 C9              - test r9b,r9b
+76CAA04BB4DA: 0F 84 50 00 00 00     - je 76CAA04BB530
+76CAA04BB4E0: 4D 33 D2              - xor r10,r10
+76CAA04BB4E3: 44 8A 55 FE           - mov r10b,[rbp-02]
+76CAA04BB4E7: 4D 84 D2              - test r10b,r10b
+76CAA04BB4EA: 0F 84 40 00 00 00     - je 76CAA04BB530
+76CAA04BB4F0: 4C 8B 5D 10           - mov r11,[rbp+10]
+76CAA04BB4F4: 41 8B 83 B0 01 00 00  - mov eax,[r11+000001B0]
+76CAA04BB4FB: 89 45 D4              - mov [rbp-2C],eax
+76CAA04BB4FE: 48 8B 4D D8           - mov rcx,[rbp-28]
+// ---------- INJECTING HERE ----------
+76CAA04BB502: 8B 51 44              - mov edx,[rcx+44]
+// ---------- DONE INJECTING  ----------
+76CAA04BB505: 89 55 D0              - mov [rbp-30],edx
+76CAA04BB508: 3B C2                 - cmp eax,edx
+76CAA04BB50A: 0F 84 20 00 00 00     - je 76CAA04BB530
+76CAA04BB510: 44 8B 41 44           - mov r8d,[rcx+44]
+76CAA04BB514: 44 89 45 D4           - mov [rbp-2C],r8d
+76CAA04BB518: 49 8B CB              - mov rcx,r11
+76CAA04BB51B: 41 8B D0              - mov edx,r8d
+76CAA04BB51E: 48 83 EC 20           - sub rsp,20
+76CAA04BB522: E8 59 E4 03 00        - call 76CAA04F9980
+76CAA04BB527: 48 89 6C 24 F8        - mov [rsp-08],rbp
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28185</ID>
+              <Description>"ch qty read part"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Wartales.exe
+  Version: 
+  Date   : 2024-04-25
+  Author : SanitKa
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobScanRegion(INJECT, regionStart, regionEnd, 41 8B 03 89 45 CC 48 8B 4D 18 8B 55 CC 48 83 EC 20 E8 ?? ?? ?? ?? 48 89 6C 24 F8 48 83 C4 20 4C 8B 55 C0) // should be unique
+alloc(newmem,$1000,INJECT)
+
+label(code)
+label(return)
+label(ptr_itemstat)
+
+newmem:
+  mov rax,ptr_itemstat
+  mov [rax],r10
+
+code:
+  mov eax,[r11]
+  mov [rbp-34],eax
+  jmp return
+
+ptr_itemstat:
+  dq 0
+
+INJECT:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT)
+registersymbol(ptr_itemstat)
+
+[DISABLE]
+
+INJECT:
+  db 41 8B 03 89 45 CC
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9F8B2E76
+
+76CA9F8B2E41: 49 B8 B8 C0 F0 DB 13 02 00 00  - mov r8,00000213DBF0C0B8
+76CA9F8B2E4B: 48 BA 26 7A 4B 00 00 00 00 00  - mov rdx,00000000004B7A26
+76CA9F8B2E55: 49 8B CA                       - mov rcx,r10
+76CA9F8B2E58: 48 B8 90 17 4A 5C FF 7F 00 00  - mov rax,libhl.hl_dyn_geti
+76CA9F8B2E62: 48 83 EC 20                    - sub rsp,20
+76CA9F8B2E66: FF D0                          - call rax
+76CA9F8B2E68: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9F8B2E6D: 48 83 C4 20                    - add rsp,20
+76CA9F8B2E71: 89 45 CC                       - mov [rbp-34],eax
+76CA9F8B2E74: EB 06                          - jmp 76CA9F8B2E7C
+// ---------- INJECTING HERE ----------
+76CA9F8B2E76: 41 8B 03                       - mov eax,[r11]
+// ---------- DONE INJECTING  ----------
+76CA9F8B2E79: 89 45 CC                       - mov [rbp-34],eax
+76CA9F8B2E7C: 48 8B 4D 18                    - mov rcx,[rbp+18]
+76CA9F8B2E80: 8B 55 CC                       - mov edx,[rbp-34]
+76CA9F8B2E83: 48 83 EC 20                    - sub rsp,20
+76CA9F8B2E87: E8 14 5F 84 FF                 - call 76CA9F0F8DA0
+76CA9F8B2E8C: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9F8B2E91: 48 83 C4 20                    - add rsp,20
+76CA9F8B2E95: 4C 8B 55 C0                    - mov r10,[rbp-40]
+76CA9F8B2E99: 49 8B 52 20                    - mov rdx,[r10+20]
+76CA9F8B2E9D: 48 85 D2                       - test rdx,rdx
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28186</ID>
+                  <Description>"ptr_itemstat"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>ptr_itemstat</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28187</ID>
+              <Description>"ch qty"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Wartales.exe
+  Version: 
+  Date   : 2024-04-25
+  Author : SanitKa
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobScanRegion(INJCHQTY, regionStart, regionEnd, E8 41 89 03 48 8B 45 F8) // should be unique
+
+alloc(newmem,$1000,INJCHQTY)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  mov [r11],eax
+  mov rax,[rbp-08]
+  jmp return
+
+INJCHQTY+01:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJCHQTY)
+
+[DISABLE]
+
+INJCHQTY+01:
+  db 41 89 03 48 8B 45 F8
+
+unregistersymbol(INJCHQTY)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9FAD10C7
+
+76CA9FAD1092: 49 B8 B8 C0 F0 DB 13 02 00 00  - mov r8,00000213DBF0C0B8
+76CA9FAD109C: 48 BA 26 7A 4B 00 00 00 00 00  - mov rdx,00000000004B7A26
+76CA9FAD10A6: 49 8B CA                       - mov rcx,r10
+76CA9FAD10A9: 48 B8 F0 20 4A 5C FF 7F 00 00  - mov rax,libhl.hl_dyn_seti
+76CA9FAD10B3: 48 83 EC 20                    - sub rsp,20
+76CA9FAD10B7: FF D0                          - call rax
+76CA9FAD10B9: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9FAD10BE: 48 83 C4 20                    - add rsp,20
+76CA9FAD10C2: EB 06                          - jmp 76CA9FAD10CA
+76CA9FAD10C4: 8B 45 E8                       - mov eax,[rbp-18]
+// ---------- INJECTING HERE ----------
+76CA9FAD10C7: 41 89 03                       - mov [r11],eax
+// ---------- DONE INJECTING  ----------
+76CA9FAD10CA: 48 8B 45 F8                    - mov rax,[rbp-08]
+76CA9FAD10CE: 48 8B 48 20                    - mov rcx,[rax+20]
+76CA9FAD10D2: 48 85 C9                       - test rcx,rcx
+76CA9FAD10D5: 75 36                          - jne 76CA9FAD110D
+76CA9FAD10D7: 4C 8B 4D EC                    - mov r9,[rbp-14]
+76CA9FAD10DB: 49 B8 B8 C0 F0 DB 13 02 00 00  - mov r8,00000213DBF0C0B8
+76CA9FAD10E5: 48 BA D9 45 63 0A 00 00 00 00  - mov rdx,000000000A6345D9
+76CA9FAD10EF: 48 8B C8                       - mov rcx,rax
+76CA9FAD10F2: 48 B8 F0 20 4A 5C FF 7F 00 00  - mov rax,libhl.hl_dyn_seti
+76CA9FAD10FC: 48 83 EC 20                    - sub rsp,20
+}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28753</ID>
+          <Description>"Increase Movement Old"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+aobScanRegion(speed, 700000000000, 7FFFFFFFFFFF, F2 48 0F 11 ?? ?? ?? 8B ?? ?? F2 49 0F 10 ?? ?? ?? 00 00 F2 48 0F 11 ?? ?? ?? 8B ?? ?? ?? 89)
+alloc(newmem,$100,speed)
+
+label(speedBkp)
+label(speedVal)
+label(return)
+
+newmem:
+  push rax
+  mov rax,[r11+ac]
+  test rax,rax
+  je @f
+  mov rax,speedVal
+  movsd xmm4,[speedVal]
+  pop rax
+  jmp return
+@@:
+  pop rax
+speedBkp:
+  readmem(speed+0A,9)
+  jmp return
+
+align 10
+speedVal:
+  dq (double)25.0
+
+speed+0A:
+  jmp newmem
+  nop 4
+return:
+registersymbol(speed)
+registersymbol(speedBkp)
+registersymbol(speedVal)
+
+[DISABLE]
+speed+0A:
+  readmem(speedBkp,9)
+unregistersymbol(*)
+dealloc(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9F4FDBD4
+
+76CA9F4FDB9B: 48 83 C4 20                    - add rsp,20
+76CA9F4FDB9F: F2 48 0F 11 45 90              - movsd [rbp-70],xmm0
+76CA9F4FDBA5: F2 48 0F 10 2D DA 24 B0 FF     - movsd xmm5,[76CA9F000088]
+76CA9F4FDBAE: F2 48 0F 11 6D 88              - movsd [rbp-78],xmm5
+76CA9F4FDBB4: F2 48 0F 59 C5                 - mulsd xmm0,xmm5
+76CA9F4FDBB9: F2 48 0F 11 45 90              - movsd [rbp-70],xmm0
+76CA9F4FDBBF: F2 48 0F 10 4D 98              - movsd xmm1,[rbp-68]
+76CA9F4FDBC5: F2 48 0F 58 C8                 - addsd xmm1,xmm0
+76CA9F4FDBCA: F2 48 0F 11 4D 98              - movsd [rbp-68],xmm1
+76CA9F4FDBD0: 4C 8B 45 10                    - mov r8,[rbp+10]
+// ---------- INJECTING HERE ----------
+76CA9F4FDBD4: F2 49 0F 10 90 10 01 00 00     - movsd xmm2,[r8+00000110]
+// ---------- DONE INJECTING  ----------
+76CA9F4FDBDD: F2 48 0F 11 55 90              - movsd [rbp-70],xmm2
+76CA9F4FDBE3: 4D 8B 50 08                    - mov r10,[r8+08]
+76CA9F4FDBE7: 4C 89 95 70 FF FF FF           - mov [rbp-00000090],r10
+76CA9F4FDBEE: 4D 85 D2                       - test r10,r10
+76CA9F4FDBF1: 75 1E                          - jne 76CA9F4FDC11
+76CA9F4FDBF3: 48 83 EC 08                    - sub rsp,08
+76CA9F4FDBF7: 68 CD 95 64 EE                 - push FFFFFFFFEE6495CD
+76CA9F4FDBFC: 48 B8 20 1A 00 9F CA 76 00 00  - mov rax,000076CA9F001A20
+76CA9F4FDC06: 48 83 EC 20                    - sub rsp,20
+76CA9F4FDC0A: FF D0                          - call rax
+}
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9FCB2211
+
+76CA9FCB21DB: F2 48 0F 10 55 B8              - movsd xmm2,[rbp-48]
+76CA9FCB21E1: F2 48 0F 59 D2                 - mulsd xmm2,xmm2
+76CA9FCB21E6: F2 48 0F 11 55 A0              - movsd [rbp-60],xmm2
+76CA9FCB21EC: F2 48 0F 58 CA                 - addsd xmm1,xmm2
+76CA9FCB21F1: F2 48 0F 11 4D A8              - movsd [rbp-58],xmm1
+76CA9FCB21F7: F2 48 0F 59 C0                 - mulsd xmm0,xmm0
+76CA9FCB21FC: F2 48 0F 11 45 A0              - movsd [rbp-60],xmm0
+76CA9FCB2202: F2 48 0F 58 C8                 - addsd xmm1,xmm0
+76CA9FCB2207: F2 48 0F 11 4D A8              - movsd [rbp-58],xmm1
+76CA9FCB220D: 4C 8B 5D 10                    - mov r11,[rbp+10]
+// ---------- INJECTING HERE ----------
+76CA9FCB2211: F2 49 0F 10 A3 10 01 00 00     - movsd xmm4,[r11+00000110]
+// ---------- DONE INJECTING  ----------
+76CA9FCB221A: F2 48 0F 11 65 A0              - movsd [rbp-60],xmm4
+76CA9FCB2220: 49 8B 4B 08                    - mov rcx,[r11+08]
+76CA9FCB2224: 48 89 4D 80                    - mov [rbp-80],rcx
+76CA9FCB2228: 48 85 C9                       - test rcx,rcx
+76CA9FCB222B: 75 1E                          - jne 76CA9FCB224B
+76CA9FCB222D: 48 83 EC 08                    - sub rsp,08
+76CA9FCB2231: 68 CD 95 64 EE                 - push FFFFFFFFEE6495CD
+76CA9FCB2236: 48 B8 D0 13 00 9F CA 76 00 00  - mov rax,000076CA9F0013D0
+76CA9FCB2240: 48 83 EC 20                    - sub rsp,20
+76CA9FCB2244: FF D0                          - call rax
+}
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28754</ID>
+              <Description>"Speed"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Double</VariableType>
+              <Address>speedVal</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28473</ID>
+          <Description>"Inventory Header"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+
+aobscanregion(InvPtrs,startaddy1,startaddy1+1fff0000,55 48 8B EC 48 81 EC 80 00 00 00 48 89 4D 10 48 89 55 18 4C 89 45 20 4C 89 4D 28 4D 85 C0 0F 85 36)
+registersymbol(InvPtrs)
+
+alloc(newmem,$1000,InvPtrs)
+
+registersymbol(InvPtrAry)
+label(InvPtrAry)
+label(return)
+
+newmem:
+  push rbp
+  lea rcx,[rcx]
+cmp dword ptr[rsp+58],libhl.uvszprintf+2AC8
+jne short @f
+lea rcx,[rcx]
+@@:
+cmp dword ptr[rsp+50],Wartales.exe+20968
+jne short @f
+lea rcx,[rcx]
+@@:
+cmp [InvPtrAry+8],200
+jbe @f
+and [InvPtrAry+8],0
+@@:
+mov [InvPtrAry],rcx
+  mov rbp,rsp
+  sub rsp,00000080
+  jmp return
+align 8
+InvPtrAry:
+dq 0
+
+
+InvPtrs:
+  jmp newmem
+  nop 6
+return:
+
+[DISABLE]
+
+InvPtrs:
+  db 55 48 8B EC 48 81 EC 80 00 00 00
+
+unregistersymbol(InvPtrAry)
+unregistersymbol(InvPtrs)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9FB26FB0
+
+76CA9FB26F94: 48 89 6C 24 F8        - mov [rsp-08],rbp
+76CA9FB26F99: 45 33 C0              - xor r8d,r8d
+76CA9FB26F9C: 44 88 45 F7           - mov [rbp-09],r8b
+76CA9FB26FA0: 49 8B C0              - mov rax,r8
+76CA9FB26FA3: 48 81 C4 B0 00 00 00  - add rsp,000000B0
+76CA9FB26FAA: 5D                    - pop rbp
+76CA9FB26FAB: 48 C3                 - ret 
+76CA9FB26FAD: 90                    - nop 
+76CA9FB26FAE: 90                    - nop 
+76CA9FB26FAF: 90                    - nop 
+// ---------- INJECTING HERE ----------
+76CA9FB26FB0: 55                    - push rbp
+// ---------- DONE INJECTING  ----------
+76CA9FB26FB1: 48 8B EC              - mov rbp,rsp
+76CA9FB26FB4: 48 81 EC 80 00 00 00  - sub rsp,00000080
+76CA9FB26FBB: 48 89 4D 10           - mov [rbp+10],rcx
+76CA9FB26FBF: 48 89 55 18           - mov [rbp+18],rdx
+76CA9FB26FC3: 4C 89 45 20           - mov [rbp+20],r8
+76CA9FB26FC7: 4C 89 4D 28           - mov [rbp+28],r9
+76CA9FB26FCB: 4D 85 C0              - test r8,r8
+76CA9FB26FCE: 0F 85 36 00 00 00     - jne 76CA9FB2700A
+76CA9FB26FD4: B8 01 00 00 00        - mov eax,00000001
+76CA9FB26FD9: 89 45 FC              - mov [rbp-04],eax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28474</ID>
+              <Description>"base address,  CTRL } or CTRL {,  increase or decrease"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>InvPtrAry</Address>
+              <Offsets>
+                <Offset>[InvPtrAry+8]+18</Offset>
+                <Offset>10</Offset>
+                <Offset>8</Offset>
+                <Offset>28</Offset>
+                <Offset>10</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28572</ID>
+                  <Description>"offset (factors of x8}"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>InvPtrAry+8</Address>
+                  <Hotkeys>
+                    <Hotkey>
+                      <Action>Increase Value</Action>
+                      <Keys>
+                        <Key>17</Key>
+                        <Key>221</Key>
+                      </Keys>
+                      <Value>20</Value>
+                      <ID>0</ID>
+                    </Hotkey>
+                    <Hotkey>
+                      <Action>Decrease Value</Action>
+                      <Keys>
+                        <Key>17</Key>
+                        <Key>219</Key>
+                      </Keys>
+                      <Value>20</Value>
+                      <ID>1</ID>
+                    </Hotkey>
+                  </Hotkeys>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28573</ID>
+                  <Description>"enc"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Wartales</CustomType>
+                  <Address>+0</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>28574</ID>
+                      <Description>"No description"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>-4</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28490</ID>
+                  <Description>"1"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+0</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28575</ID>
+                  <Description>"enc"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Wartales</CustomType>
+                  <Address>+8</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>28576</ID>
+                      <Description>"No description"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>-4</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28492</ID>
+                  <Description>"2"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+8</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28491</ID>
+                  <Description>"enc"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Wartales</CustomType>
+                  <Address>+10</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28577</ID>
+                  <Description>"3"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+10</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28498</ID>
+                  <Description>"enc"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Wartales</CustomType>
+                  <Address>+18</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28578</ID>
+                  <Description>"4"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+18</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28497</ID>
+                  <Description>"enc"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Wartales</CustomType>
+                  <Address>+20</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28579</ID>
+                  <Description>"5"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+20</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28496</ID>
+                  <Description>"enc"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Wartales</CustomType>
+                  <Address>+28</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28580</ID>
+                  <Description>"6"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+28</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28495</ID>
+                  <Description>"enc"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Wartales</CustomType>
+                  <Address>+30</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28581</ID>
+                  <Description>"7"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+30</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28494</ID>
+                  <Description>"enc"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Wartales</CustomType>
+                  <Address>+38</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28582</ID>
+                  <Description>"8"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+38</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28493</ID>
+                  <Description>"enc"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Wartales</CustomType>
+                  <Address>+40</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28583</ID>
+                  <Description>"9"</Description>
+                  <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+40</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28626</ID>
+              <Description>"Paths Cheat - 1 more objective to complete"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+
+aobscanregion(PathsCheat,startaddy1,startaddy1+1fff0000,45 8B 08 44 89 4D B0 4C 8B 95)
+registersymbol(PathsCheat)
+
+alloc(newmem,$1000,PathsCheat)
+
+label(return)
+
+newmem:
+mov r9d,[rax+8]
+nop 2
+dec r9
+mov [r8],r9d
+  mov [rbp-50],r9d
+  jmp return
+
+PathsCheat:
+  jmp newmem
+  nop 2
+return:
+
+[DISABLE]
+
+PathsCheat:
+  db 45 8B 08 44 89 4D B0
+
+unregistersymbol(PathsCheat)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA15BC78A
+
+76CAA15BC755: 49 B8 B8 10 C5 E8 B1 01 00 00  - mov r8,000001B1E8C510B8
+76CAA15BC75F: 48 BA B4 9B E3 EB FF FF FF FF  - mov rdx,FFFFFFFFEBE39BB4
+76CAA15BC769: 49 8B CA                       - mov rcx,r10
+76CAA15BC76C: 48 B8 C0 17 D3 88 FF 7F 00 00  - mov rax,libhl.hl_dyn_geti
+76CAA15BC776: 48 83 EC 20                    - sub rsp,20
+76CAA15BC77A: FF D0                          - call rax
+76CAA15BC77C: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA15BC781: 48 83 C4 20                    - add rsp,20
+76CAA15BC785: 89 45 B0                       - mov [rbp-50],eax
+76CAA15BC788: EB 07                          - jmp 76CAA15BC791
+// ---------- INJECTING HERE ----------
+76CAA15BC78A: 45 8B 08                       - mov r9d,[r8]
+// ---------- DONE INJECTING  ----------
+76CAA15BC78D: 44 89 4D B0                    - mov [rbp-50],r9d
+76CAA15BC791: 4C 8B 95 10 FF FF FF           - mov r10,[rbp-000000F0]
+76CAA15BC798: 4D 85 D2                       - test r10,r10
+76CAA15BC79B: 0F 84 34 00 00 00              - je 76CAA15BC7D5
+76CAA15BC7A1: 4D 85 D2                       - test r10,r10
+76CAA15BC7A4: 74 06                          - je 76CAA15BC7AC
+76CAA15BC7A6: 4D 8B 52 08                    - mov r10,[r10+08]
+76CAA15BC7AA: EB 03                          - jmp 76CAA15BC7AF
+76CAA15BC7AC: 4D 33 D2                       - xor r10,r10
+76CAA15BC7AF: 44 89 55 AC                    - mov [rbp-54],r10d
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28665</ID>
+                  <Description>"X to always max 1st objective"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>[ENABLE]
+
+PathsCheat+9+(dword)[PathsCheat+1]:
+jmp short +3
+ 
+[DISABLE]
+
+PathsCheat+9+(dword)[PathsCheat+1]:
+nop 2
+
+
+</AssemblerScript>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28655</ID>
+              <Description>"Path XP and Level"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+
+aobscanregion(aofgb2za,startaddy1,startaddy1+1fff0000,4A 8B 54 C1 18 48 89 55 F8 48 89 95 88 FD FF FF)
+registersymbol(aofgb2za)
+
+alloc(newmem,$1000,aofgb2za)
+
+registersymbol(PRewardPtr)
+label(PRewardPtr)
+label(return)
+
+newmem:
+mov [PRewardPtr],rcx
+  mov rdx,[rcx+r8*8+18]
+  jmp return
+PRewardPtr:
+dq 0
+
+aofgb2za:
+  jmp newmem
+return:
+
+[DISABLE]
+
+aofgb2za:
+  db 4A 8B 54 C1 18
+
+unregistersymbol(PRewardPtr)
+unregistersymbol(aofgb2za)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9FC2E81B
+
+76CA9FC2E7E7: 45 3B D1                       - cmp r10d,r9d
+76CA9FC2E7EA: 0F 82 0F 00 00 00              - jb 76CA9FC2E7FF
+76CA9FC2E7F0: 4D 33 DB                       - xor r11,r11
+76CA9FC2E7F3: 4C 89 9D 88 FD FF FF           - mov [rbp-00000278],r11
+76CA9FC2E7FA: E9 2C 00 00 00                 - jmp 76CA9FC2E82B
+76CA9FC2E7FF: 48 8B 85 10 FF FF FF           - mov rax,[rbp-000000F0]
+76CA9FC2E806: 48 8B 48 10                    - mov rcx,[rax+10]
+76CA9FC2E80A: 48 89 8D 80 FD FF FF           - mov [rbp-00000280],rcx
+76CA9FC2E811: 4D 33 C0                       - xor r8,r8
+76CA9FC2E814: 44 8B 85 58 FF FF FF           - mov r8d,[rbp-000000A8]
+// ---------- INJECTING HERE ----------
+76CA9FC2E81B: 4A 8B 54 C1 18                 - mov rdx,[rcx+r8*8+18]
+// ---------- DONE INJECTING  ----------
+76CA9FC2E820: 48 89 55 F8                    - mov [rbp-08],rdx
+76CA9FC2E824: 48 89 95 88 FD FF FF           - mov [rbp-00000278],rdx
+76CA9FC2E82B: 4C 8B 4D 10                    - mov r9,[rbp+10]
+76CA9FC2E82F: 4D 8B 91 D8 00 00 00           - mov r10,[r9+000000D8]
+76CA9FC2E836: 4C 89 95 10 FF FF FF           - mov [rbp-000000F0],r10
+76CA9FC2E83D: 4D 85 D2                       - test r10,r10
+76CA9FC2E840: 75 1E                          - jne 76CA9FC2E860
+76CA9FC2E842: 48 83 EC 08                    - sub rsp,08
+76CA9FC2E846: 68 57 93 07 FF                 - push FFFFFFFFFF079357
+76CA9FC2E84B: 48 B8 D0 13 00 9F CA 76 00 00  - mov rax,000076CA9F0013D0
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28663</ID>
+                  <Description>"lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>PRewardPtr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28662</ID>
+                  <Description>"lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>PRewardPtr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28661</ID>
+                  <Description>"lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>PRewardPtr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28660</ID>
+                  <Description>"lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>PRewardPtr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28656</ID>
+                  <Description>"pp"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>PRewardPtr</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28657</ID>
+                  <Description>"pp"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>PRewardPtr</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28659</ID>
+                  <Description>"pp"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>PRewardPtr</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28658</ID>
+                  <Description>"pp"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>PRewardPtr</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28632</ID>
+              <Description>"find data pointers"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+
+aobscanregion(findbdatastuff,startaddy1,startaddy1+1fff0000,0F 8D 0E 03 00 00 44 8B 5D)
+registersymbol(findbdatastuff)
+
+alloc(newmem,$1000,findbdatastuff)
+
+registersymbol(dataptrs6)
+label(dataptrs6)
+label(return)
+
+newmem:
+jnl findbdatastuff+314
+lea r8,[r8]
+mov [dataptrs6],r8
+  jmp return
+align 8
+dataptrs6:
+
+findbdatastuff:
+  jmp newmem
+  nop
+return:
+
+[DISABLE]
+
+findbdatastuff:
+  db 0F 8D 0E 03 00 00
+
+unregistersymbol(dataptrs6)
+unregistersymbol(findbdatastuff)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CA9FB23A31
+
+76CA9FB23A04: 48 83 EC 08                    - sub rsp,08
+76CA9FB23A08: 68 57 93 07 FF                 - push FFFFFFFFFF079357
+76CA9FB23A0D: 48 B8 D0 13 00 9F CA 76 00 00  - mov rax,000076CA9F0013D0
+76CA9FB23A17: 48 83 EC 20                    - sub rsp,20
+76CA9FB23A1B: FF D0                          - call rax
+76CA9FB23A1D: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CA9FB23A22: 45 8B 48 08                    - mov r9d,[r8+08]
+76CA9FB23A26: 44 89 4D D4                    - mov [rbp-2C],r9d
+76CA9FB23A2A: 44 8B 55 DC                    - mov r10d,[rbp-24]
+76CA9FB23A2E: 45 3B D1                       - cmp r10d,r9d
+// ---------- INJECTING HERE ----------
+76CA9FB23A31: 0F 8D 0E 03 00 00              - jnl 76CA9FB23D45
+// ---------- DONE INJECTING  ----------
+76CA9FB23A37: 44 8B 5D DC                    - mov r11d,[rbp-24]
+76CA9FB23A3B: 44 89 5D D8                    - mov [rbp-28],r11d
+76CA9FB23A3F: FF 45 DC                       - inc [rbp-24]
+76CA9FB23A42: 41 8B 40 08                    - mov eax,[r8+08]
+76CA9FB23A46: 89 45 D4                       - mov [rbp-2C],eax
+76CA9FB23A49: 44 3B D8                       - cmp r11d,eax
+76CA9FB23A4C: 0F 82 0C 00 00 00              - jb 76CA9FB23A5E
+76CA9FB23A52: 48 33 C9                       - xor rcx,rcx
+76CA9FB23A55: 48 89 4D C8                    - mov [rbp-38],rcx
+76CA9FB23A59: E9 46 00 00 00                 - jmp 76CA9FB23AA4
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28654</ID>
+                  <Description>"krowns, influence, happiness, valour, path points"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>dataptrs6</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>10</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>28644</ID>
+                      <Description>"data ptr 1"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28633</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28645</ID>
+                      <Description>"data ptr 2"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+20</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28634</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+20</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28646</ID>
+                      <Description>"data ptr 3"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+28</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28635</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+28</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28647</ID>
+                      <Description>"data ptr 4"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+30</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28636</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+30</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28648</ID>
+                      <Description>"data ptr 5"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+38</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28637</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+38</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28649</ID>
+                      <Description>"data ptr 6"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+40</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28638</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+40</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28650</ID>
+                      <Description>"data ptr 7"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+48</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28639</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+48</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28651</ID>
+                      <Description>"data ptr 8"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+50</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28640</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+50</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28652</ID>
+                      <Description>"data ptr 9"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+58</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28641</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+58</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28653</ID>
+                      <Description>"data ptr 10"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+60</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28642</ID>
+                      <Description>"enc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>Wartales</CustomType>
+                      <Address>+60</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28374</ID>
+          <Description>"Combat Pointer (BackUp)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+
+aobscanregion(combatptrs,startaddy1,startaddy1+1fff0000,4C 8B 81 70 03 00 00 4C 89 45 E0)
+registersymbol(combatptrs)
+
+alloc(newmem,$500,combatptrs)
+
+registersymbol(combatptr1)
+label(combatptr1)
+label(return)
+
+newmem:
+mov r8,combatptr1
+mov [r8],rcx
+  mov r8,[rcx+00000370]
+  jmp return
+align 8
+combatptr1:
+dq 0
+
+
+combatptrs:
+  jmp newmem
+  nop 2
+return:
+
+[DISABLE]
+
+combatptrs:
+  db 4C 8B 81 70 03 00 00
+
+unregistersymbol(*)
+dealloc(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 76CAA0497019
+
+76CAA0496FEB: E9 2A 09 00 00                 - jmp 76CAA049791A
+76CAA0496FF0: 48 8B 4D 10                    - mov rcx,[rbp+10]
+76CAA0496FF4: 48 8B 91 98 03 00 00           - mov rdx,[rcx+00000398]
+76CAA0496FFB: 48 89 55 D0                    - mov [rbp-30],rdx
+76CAA0496FFF: 48 85 D2                       - test rdx,rdx
+76CAA0497002: 75 15                          - jne 76CAA0497019
+76CAA0497004: 48 B8 A0 13 00 9F CA 76 00 00  - mov rax,000076CA9F0013A0
+76CAA049700E: 48 83 EC 20                    - sub rsp,20
+76CAA0497012: FF D0                          - call rax
+76CAA0497014: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+// ---------- INJECTING HERE ----------
+76CAA0497019: 4C 8B 81 70 03 00 00           - mov r8,[rcx+00000370]
+// ---------- DONE INJECTING  ----------
+76CAA0497020: 4C 89 45 E0                    - mov [rbp-20],r8
+76CAA0497024: 4D 85 C0                       - test r8,r8
+76CAA0497027: 75 1E                          - jne 76CAA0497047
+76CAA0497029: 48 83 EC 08                    - sub rsp,08
+76CAA049702D: 68 90 74 0B E4                 - push FFFFFFFFE40B7490
+76CAA0497032: 48 B8 00 14 00 9F CA 76 00 00  - mov rax,000076CA9F001400
+76CAA049703C: 48 83 EC 20                    - sub rsp,20
+76CAA0497040: FF D0                          - call rax
+76CAA0497042: 48 89 6C 24 F8                 - mov [rsp-08],rbp
+76CAA0497047: 4D 8B 88 28 02 00 00           - mov r9,[r8+00000228]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>28375</ID>
+              <Description>"Selected Unit"</Description>
+              <Options moHideChildren="1"/>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>combatptr1</Address>
+              <Offsets>
+                <Offset>368</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>26</ID>
+              <Description>"Health"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>combatPtr1</Address>
+              <Offsets>
+                <Offset>13C</Offset>
+                <Offset>370</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>27</ID>
+              <Description>"Armor"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>combatptr1</Address>
+              <Offsets>
+                <Offset>138</Offset>
+                <Offset>370</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28</ID>
+              <Description>"Movement"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>combatptr1</Address>
+              <Offsets>
+                <Offset>160</Offset>
+                <Offset>370</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>

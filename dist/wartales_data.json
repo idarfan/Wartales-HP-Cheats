@@ -1,0 +1,22 @@
+[
+  {
+    "name": "小馬",
+    "note": "",
+    "stable_ptr": {
+      "ptr_addr": 1247779227904,
+      "offset": 316,
+      "rel_base": null,
+      "is_static": false
+    }
+  },
+  {
+    "name": "角色2",
+    "note": "",
+    "stable_ptr": {
+      "ptr_addr": 1246189588160,
+      "offset": 316,
+      "rel_base": null,
+      "is_static": false
+    }
+  }
+]
