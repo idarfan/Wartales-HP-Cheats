@@ -1,22 +1,15 @@
 [
   {
-    "name": "小馬",
+    "name": "馬",
     "note": "",
     "stable_ptr": {
-      "ptr_addr": 1247779227904,
+      "ptr_addr": 1683088680536,
       "offset": 316,
       "rel_base": null,
       "is_static": false
-    }
-  },
-  {
-    "name": "角色2",
-    "note": "",
-    "stable_ptr": {
-      "ptr_addr": 1246189588160,
-      "offset": 316,
-      "rel_base": null,
-      "is_static": false
-    }
+    },
+    "ptr_chain": null,
+    "locked": true,
+    "lock_val": 100
   }
 ]
