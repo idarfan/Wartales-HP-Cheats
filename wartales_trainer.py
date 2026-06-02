@@ -714,6 +714,7 @@ class App(tk.Tk):
         for c in t:
             if c.locked: continue
             c.locked=True; c.lock_val=v; self._do_char_lock(c,v)
+        self._save_data()
         self._refresh_char_list()
         self._st(f"鎖定 HP={v}",RED)
 
@@ -726,6 +727,7 @@ class App(tk.Tk):
         for c in (self._char_sel() or self._chars):
             if c.job: self.after_cancel(c.job)
             c.locked=False; c.job=None
+        self._save_data()
         self._refresh_char_list(); self._st("已解鎖",GRAY)
 
     def _char_remove(self):
