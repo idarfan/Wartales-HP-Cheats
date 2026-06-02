@@ -325,8 +325,8 @@ class App(tk.Tk):
         self._hp_pool=[]
 
         self._build()
-        self._attach()
         self._load_data()
+        self._attach()
         # 啟動定時刷新（顯示當前HP值）
         self._refresh_loop()
 
