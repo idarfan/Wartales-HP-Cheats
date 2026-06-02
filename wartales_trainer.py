@@ -371,7 +371,7 @@ class App(tk.Tk):
         self._refresh_char_list()
 
     # ── 背景掃描 ────────────────────────────────────────────────────
-    def _bg(self, fn, on_done, status_v=None, btn=None):
+    def _bg(self, fn, on_done, status_v=None, btn=None, restore_cmd=None):
         if self._scanning: messagebox.showwarning("提示","掃描中"); return
         self._scanning=True; self._stop.clear()
         if btn: btn.config(text="⏹ 停止",bg=RED,
@@ -379,12 +379,15 @@ class App(tk.Tk):
         if status_v: status_v.set("掃描中...")
         def worker():
             r=fn()
-            self.after(0,lambda:self._bg_done(r,on_done,status_v,btn))
+            self.after(0,lambda:self._bg_done(r,on_done,status_v,btn,restore_cmd))
         threading.Thread(target=worker,daemon=True).start()
 
-    def _bg_done(self,r,on_done,status_v,btn):
+    def _bg_done(self,r,on_done,status_v,btn,restore_cmd=None):
         self._scanning=False
-        if btn: btn.config(text="🔍 掃描",bg=ACC)
+        if btn:
+            kw=dict(text="🔍 掃描",bg=ACC)
+            if restore_cmd: kw['command']=restore_cmd
+            btn.config(**kw)
         on_done(r)
 
     # ── 定時刷新 ────────────────────────────────────────────────────
@@ -554,7 +557,7 @@ class App(tk.Tk):
             self._hp_pool_v.set(f"找到 {len(r)} 個  →  讓HP改變後按縮小")
             self._btn_hp1.config(text="🔍 掃描",bg=ACC,command=self._hp_first)
         self._btn_hp1.config(text="⏹ 停止",bg=RED,command=lambda:self._stop.set())
-        self._bg(do,done,self._hp_pool_v,self._btn_hp1)
+        self._bg(do,done,self._hp_pool_v,self._btn_hp1,restore_cmd=self._hp_first)
 
     def _hp_narrow(self):
         if not self._chk(): return
@@ -775,7 +778,7 @@ class App(tk.Tk):
                 self._st(f"{char.name}：多層掃描完成，找到 {len(results)} 條候選鏈",
                          GRN if results else YEL)
                 self._try_stabilize_ml(char,results)
-            self._bg(do,done)
+            self._bg(do,done,btn=self._btn_hp1,restore_cmd=self._hp_first)
             break  # 一次只掃一個角色（背景掃描有 lock）
 
     # ── 對話框 ──────────────────────────────────────────────────────
