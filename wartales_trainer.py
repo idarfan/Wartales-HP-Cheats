@@ -364,7 +364,9 @@ class App(tk.Tk):
                         c.candidates = [addr]
             # 若上次關閉時是鎖定狀態，且現在位址有效 → 自動恢復鎖定迴圈
             if c.locked and c.lock_val is not None and c.candidates:
-                c.job = None  # 清掉舊 job id（已失效）
+                if c.job:                    # 先取消舊迴圈，避免重連時雙重寫入
+                    self.after_cancel(c.job)
+                c.job = None
                 self._do_char_lock(c, c.lock_val)
         self._refresh_char_list()
 
@@ -623,8 +625,9 @@ class App(tk.Tk):
         if not self._pm or not char.ptr_candidates or not char.candidates: return
         known_hp_addr = char.candidates[0]
         mod_base=get_module_base(self._pm) or 0
-        static_ptrs=[(pa,off) for pa,off in char.ptr_candidates
-                     if is_module_addr(self._pm,pa)]
+        static_set=set(pa for pa,off in char.ptr_candidates
+                       if is_module_addr(self._pm,pa))
+        static_ptrs=[(pa,off) for pa,off in char.ptr_candidates if pa in static_set]
         candidates=static_ptrs or char.ptr_candidates
 
         valid=[]
@@ -632,7 +635,7 @@ class App(tk.Tk):
             target = resolve_ptr(self._pm, pa, off)
             if target is None: continue
             if target == known_hp_addr:           # 精確位址匹配，不再用值相等
-                is_static=is_module_addr(self._pm,pa)
+                is_static = pa in static_set      # 用快取，不再重複 syscall
                 rel=pa-mod_base if (is_static and mod_base) else None
                 valid.append({'ptr_addr':pa,'offset':off,
                               'rel_base':rel,'is_static':is_static})
@@ -750,8 +753,13 @@ class App(tk.Tk):
             return
         for c in t:
             if not c.candidates:
-                self._st(f"{c.name} 無 HP 位址，請先掃描並加入清單",RED)
-                continue
+                if self._hp_pool and len(self._hp_pool) <= 5:
+                    # 指標失效後重掃：從候選池借用位址並更新角色
+                    c.candidates = [self._hp_pool[0]]
+                    self._st(f"{c.name}：自動借用候選池位址 {self._hp_pool[0]:#x}",TEAL)
+                else:
+                    self._st(f"{c.name} 無 HP 位址，請先縮小 HP 候選到 5 個以下",RED)
+                    continue
             target=c.candidates[0]
             self._st(f"正在多層掃描 {c.name}（最多3層，需時數分鐘）...",TEAL)
             def do(tgt=target):
