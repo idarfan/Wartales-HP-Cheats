@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Wartales Trainer v9 — 自動指標學習，重啟後自動恢復"""
-import ctypes, sys, struct, threading, re, json, os, time
+import ctypes, sys, struct, threading, re, json, os
 import tkinter as tk
 from tkinter import messagebox
 
@@ -131,7 +131,7 @@ def pointer_rescan(pm, prev, new_target, max_off=0x800):
     for ptr_addr, offset in prev:
         v = read8(pm, ptr_addr)
         if v is None: continue
-        if abs((v + offset) - new_target) <= 16:
+        if abs((v + offset) - new_target) <= max_off:
             kept.append((ptr_addr, offset))
     return kept
 
@@ -645,7 +645,10 @@ class App(tk.Tk):
             char.stable_ptr=(s or valid)[0]
             self._save_data()
             self._refresh_char_list()
-            self._st(f"{char.name}：單層靜態指標學習成功，亦可用多層掃描提高穩定性",GRN) if s else self._st(f"{char.name}：單層動態指標（重啟可能失效），建議按多層掃描",YEL)
+            if s:
+                self._st(f"{char.name}：單層靜態指標學習成功，亦可用多層掃描提高穩定性",GRN)
+            else:
+                self._st(f"{char.name}：單層動態指標（重啟可能失效），建議按多層掃描",YEL)
         else:
             self._st(f"{char.name}：單層無靜態指標，請點「多層掃描」",YEL)
 
