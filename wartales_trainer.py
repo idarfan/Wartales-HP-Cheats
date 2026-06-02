@@ -402,15 +402,15 @@ class App(tk.Tk):
     def _build(self):
         hdr=tk.Frame(self,bg=BG3,pady=10); hdr.pack(fill="x")
         tk.Label(hdr,text="⚔  Wartales Trainer",
-                 font=("Segoe UI",14,"bold"),bg=BG3,fg=ACC).pack()
+                 font=("Segoe UI",16,"bold"),bg=BG3,fg=ACC).pack()
         tk.Label(hdr,text="v9 — 自動指標學習，重啟後自動恢復",
-                 font=("Segoe UI",8),bg=BG3,fg=GRAY).pack()
+                 font=("Segoe UI",10),bg=BG3,fg=GRAY).pack()
 
         pr=tk.Frame(self,bg=BG,pady=5); pr.pack(fill="x",padx=14)
-        tk.Label(pr,text="狀態：",bg=BG,fg=FG,font=("Segoe UI",9)).pack(side="left")
+        tk.Label(pr,text="狀態：",bg=BG,fg=FG,font=("Segoe UI",11)).pack(side="left")
         self.proc_v=tk.StringVar(value="未連接")
         self.proc_l=tk.Label(pr,textvariable=self.proc_v,bg=BG,fg=RED,
-                              font=("Segoe UI",9,"bold"))
+                              font=("Segoe UI",11,"bold"))
         self.proc_l.pack(side="left")
         self._mb(pr,"🔌 重連",self._attach,ACC,8).pack(side="right")
         tk.Frame(self,bg=LINE,height=1).pack(fill="x",padx=14)
@@ -429,7 +429,7 @@ class App(tk.Tk):
             ("🎯 攻距",self._pg_range)]):
             f=tk.Frame(cont,bg=BG2); self._tabs.append(f); fn(f)
             b=tk.Button(bar,text=lbl,bg=BG2 if i==0 else BG,fg=FG,
-                        font=("Segoe UI",8,"bold"),relief="flat",
+                        font=("Segoe UI",10,"bold"),relief="flat",
                         padx=10,pady=5,cursor="hand2",bd=0,
                         activebackground=BG2,activeforeground=ACC,
                         command=lambda i=i:self._sw(i))
@@ -439,7 +439,7 @@ class App(tk.Tk):
         tk.Frame(self,bg=LINE,height=1).pack(fill="x",padx=14)
         self._stv=tk.StringVar(value="就緒")
         self._stl=tk.Label(self,textvariable=self._stv,bg=BG,fg=GRAY,
-                            font=("Segoe UI",8),anchor="w")
+                            font=("Segoe UI",10),anchor="w")
         self._stl.pack(fill="x",padx=14,pady=3)
 
     def _sw(self,idx):
@@ -450,7 +450,7 @@ class App(tk.Tk):
 
     def _mb(self,p,t,c,col,w=8):
         return tk.Button(p,text=t,command=c,bg=col,fg=BG3,
-                         font=("Segoe UI",8,"bold"),relief="flat",
+                         font=("Segoe UI",10,"bold"),relief="flat",
                          padx=6,pady=4,cursor="hand2",width=w,
                          activebackground=col,activeforeground=BG3)
 
@@ -465,15 +465,15 @@ class App(tk.Tk):
         tk.Label(p,
             text="【首次設定角色】掃描 → 縮小 → 加入清單 → 程式自動學習指標\n"
                  "【之後重開遊戲】直接連線，程式自動恢復所有角色 HP 位址",
-            bg=BG2,fg=FG,font=("Segoe UI",8),
+            bg=BG2,fg=FG,font=("Segoe UI",10),
             justify="left",wraplength=430).pack(anchor="w",padx=8,pady=(6,2))
 
         # ── 掃描列 ────────────────────────────────────────────────
         sr=tk.Frame(p,bg=BG2); sr.pack(fill="x",padx=6,pady=3)
-        tk.Label(sr,text="HP：",bg=BG2,fg=FG,font=("Segoe UI",9)).pack(side="left")
+        tk.Label(sr,text="HP：",bg=BG2,fg=FG,font=("Segoe UI",11)).pack(side="left")
         self._v_hp=tk.StringVar(value="100")
         tk.Entry(sr,textvariable=self._v_hp,bg=BG,fg=FG,insertbackground=FG,
-                 font=("Consolas",10),width=8,relief="flat",
+                 font=("Consolas",12),width=8,relief="flat",
                  highlightthickness=1,highlightbackground=LINE,highlightcolor=ACC
                  ).pack(side="left",ipady=3,padx=4)
         self._btn_hp1=self._mb(sr,"🔍 掃描",self._hp_first,ACC,7)
@@ -483,11 +483,11 @@ class App(tk.Tk):
 
         self._hp_pool_v=tk.StringVar(value="尚未掃描")
         tk.Label(p,textvariable=self._hp_pool_v,
-                 bg=BG2,fg=GRAY,font=("Segoe UI",7),anchor="w").pack(fill="x",padx=8)
+                 bg=BG2,fg=GRAY,font=("Segoe UI",9),anchor="w").pack(fill="x",padx=8)
 
         pf=tk.Frame(p,bg=BG2); pf.pack(fill="x",padx=6)
         sb=tk.Scrollbar(pf,bg=BG2,troughcolor=BG2); sb.pack(side="right",fill="y")
-        self._pool_lb=tk.Listbox(pf,bg=BG,fg=FG,font=("Consolas",8),height=3,
+        self._pool_lb=tk.Listbox(pf,bg=BG,fg=FG,font=("Consolas",10),height=3,
                                   relief="flat",selectmode="extended",
                                   highlightthickness=1,highlightbackground=LINE,
                                   selectbackground=PURPLE,selectforeground=BG3,
@@ -498,20 +498,20 @@ class App(tk.Tk):
         ar=tk.Frame(p,bg=BG2); ar.pack(fill="x",padx=6,pady=2)
         self._mb(ar,"➕ 加入角色清單",self._add_char,PURPLE,14).pack(side="left")
         tk.Label(ar,text="← 選取後命名加入",bg=BG2,fg=GRAY,
-                 font=("Segoe UI",7)).pack(side="left",padx=6)
+                 font=("Segoe UI",9)).pack(side="left",padx=6)
 
         tk.Frame(p,bg=LINE,height=1).pack(fill="x",padx=6,pady=3)
 
         # ── 角色清單 ──────────────────────────────────────────────
         hdr2=tk.Frame(p,bg=BG2); hdr2.pack(fill="x",padx=6)
         tk.Label(hdr2,text="角色清單",bg=BG2,fg=GRN,
-                 font=("Segoe UI",9,"bold")).pack(side="left")
+                 font=("Segoe UI",11,"bold")).pack(side="left")
         tk.Label(hdr2,text="（★=已學習指標，重啟自動恢復）",
-                 bg=BG2,fg=TEAL,font=("Segoe UI",7)).pack(side="left",padx=6)
+                 bg=BG2,fg=TEAL,font=("Segoe UI",9)).pack(side="left",padx=6)
 
         cf=tk.Frame(p,bg=BG2); cf.pack(fill="x",padx=6)
         sb2=tk.Scrollbar(cf,bg=BG2,troughcolor=BG2); sb2.pack(side="right",fill="y")
-        self._char_lb=tk.Listbox(cf,bg=BG,fg=FG,font=("Consolas",9),height=5,
+        self._char_lb=tk.Listbox(cf,bg=BG,fg=FG,font=("Consolas",11),height=5,
                                   relief="flat",selectmode="extended",
                                   highlightthickness=1,highlightbackground=LINE,
                                   selectbackground=GRN,selectforeground=BG3,
@@ -522,14 +522,14 @@ class App(tk.Tk):
 
         # ── 操作列 ────────────────────────────────────────────────
         cr=tk.Frame(p,bg=BG2); cr.pack(fill="x",padx=6,pady=3)
-        tk.Label(cr,text="HP值：",bg=BG2,fg=FG,font=("Segoe UI",9)).pack(side="left")
+        tk.Label(cr,text="HP值：",bg=BG2,fg=FG,font=("Segoe UI",11)).pack(side="left")
         self._v_hp_w=tk.StringVar(value="9999")
         tk.Entry(cr,textvariable=self._v_hp_w,bg=BG,fg=FG,insertbackground=FG,
-                 font=("Consolas",10),width=7,relief="flat",
+                 font=("Consolas",12),width=7,relief="flat",
                  highlightthickness=1,highlightbackground=LINE,highlightcolor=ACC
                  ).pack(side="left",ipady=3,padx=4)
         for sv,st in [(9999,"9999"),(99999,"99999")]:
-            tk.Button(cr,text=st,bg=LINE,fg=FG,font=("Segoe UI",7),
+            tk.Button(cr,text=st,bg=LINE,fg=FG,font=("Segoe UI",9),
                       relief="flat",padx=4,pady=1,cursor="hand2",
                       activebackground=ACC,activeforeground=BG3,
                       command=lambda v=sv:self._v_hp_w.set(str(v))
@@ -540,7 +540,7 @@ class App(tk.Tk):
         self._mb(cr,"🗑 移除",self._char_remove,LINE,7).pack(side="left",padx=2)
         self._mb(cr,"🔗 多層掃描",self._char_ml_scan,TEAL,9).pack(side="left",padx=2)
         tk.Label(p,text="雙擊編輯名稱/附註  ｜  多層掃描：HP縮到<5個後選角色觸發",
-                 bg=BG2,fg=GRAY,font=("Segoe UI",7)).pack(anchor="w",padx=8)
+                 bg=BG2,fg=GRAY,font=("Segoe UI",9)).pack(anchor="w",padx=8)
 
     # ── HP 掃描 ─────────────────────────────────────────────────────
     def _hp_first(self):
@@ -787,17 +787,17 @@ class App(tk.Tk):
         win.configure(bg=BG); win.resizable(False,False); win.grab_set()
         win.geometry("+%d+%d"%(self.winfo_x()+80,self.winfo_y()+130))
         tk.Label(win,text="角色名稱：",bg=BG,fg=FG,
-                 font=("Segoe UI",9)).pack(padx=14,pady=(12,2),anchor="w")
+                 font=("Segoe UI",11)).pack(padx=14,pady=(12,2),anchor="w")
         vn=tk.StringVar(value=name)
         en=tk.Entry(win,textvariable=vn,bg=BG2,fg=FG,insertbackground=FG,
-                    font=("Segoe UI",10),width=18,relief="flat",
+                    font=("Segoe UI",12),width=18,relief="flat",
                     highlightthickness=1,highlightbackground=LINE,highlightcolor=ACC)
         en.pack(padx=14,pady=(2,6),ipady=4); en.focus(); en.select_range(0,"end")
         tk.Label(win,text="附註（可留空）：",bg=BG,fg=FG,
-                 font=("Segoe UI",9)).pack(padx=14,anchor="w")
+                 font=("Segoe UI",11)).pack(padx=14,anchor="w")
         vt=tk.StringVar(value=note)
         tk.Entry(win,textvariable=vt,bg=BG2,fg=FG,insertbackground=FG,
-                 font=("Segoe UI",9),width=18,relief="flat",
+                 font=("Segoe UI",11),width=18,relief="flat",
                  highlightthickness=1,highlightbackground=LINE,highlightcolor=ACC
                  ).pack(padx=14,pady=(2,10),ipady=4)
         result=[None]
@@ -835,19 +835,19 @@ class App(tk.Tk):
     def _simple_pg(self,p,key,title,hint,scan_fn,write_fn,
                    default,shortcuts=None,lock=False):
         tk.Label(p,text=title,bg=BG2,fg=ACC,
-                 font=("Segoe UI",10,"bold")).pack(anchor="w",padx=6,pady=(8,2))
-        tk.Label(p,text=hint,bg=BG2,fg=FG,font=("Segoe UI",8),
+                 font=("Segoe UI",12,"bold")).pack(anchor="w",padx=6,pady=(8,2))
+        tk.Label(p,text=hint,bg=BG2,fg=FG,font=("Segoe UI",10),
                  justify="left",wraplength=420).pack(anchor="w",padx=8)
         setattr(self,f"_v_{key}",tk.StringVar(value=default))
         r=tk.Frame(p,bg=BG2); r.pack(fill="x",padx=6,pady=4)
         tk.Entry(r,textvariable=getattr(self,f"_v_{key}"),
-                 bg=BG,fg=FG,insertbackground=FG,font=("Consolas",11),width=12,
+                 bg=BG,fg=FG,insertbackground=FG,font=("Consolas",13),width=12,
                  relief="flat",highlightthickness=1,
                  highlightbackground=LINE,highlightcolor=ACC
                  ).pack(side="left",ipady=4,padx=(0,4))
         if shortcuts:
             for sv,st in shortcuts:
-                tk.Button(r,text=st,bg=LINE,fg=FG,font=("Segoe UI",8),
+                tk.Button(r,text=st,bg=LINE,fg=FG,font=("Segoe UI",10),
                           relief="flat",padx=5,pady=2,cursor="hand2",
                           activebackground=ACC,activeforeground=BG3,
                           command=lambda v=sv,k=key:getattr(self,f"_v_{k}").set(str(v))
@@ -858,14 +858,14 @@ class App(tk.Tk):
         if lock:
             setattr(self,f"_lock_{key}",tk.BooleanVar(value=False))
             lb=tk.Button(r,text="🔒 鎖定",bg=LINE,fg=FG,
-                         font=("Segoe UI",8,"bold"),relief="flat",
+                         font=("Segoe UI",10,"bold"),relief="flat",
                          padx=6,pady=4,cursor="hand2",width=7,
                          command=lambda k=key:self._toggle_lock(k))
             lb.pack(side="left",padx=2)
             setattr(self,f"_lockbtn_{key}",lb)
         rv=tk.StringVar(value="尚未掃描"); setattr(self,f"_r_{key}",rv)
         tk.Label(p,textvariable=rv,bg=BG2,fg=GRAY,
-                 font=("Segoe UI",7),anchor="w").pack(fill="x",padx=8)
+                 font=("Segoe UI",9),anchor="w").pack(fill="x",padx=8)
 
     def _pg_gold(self,p):
         self._simple_pg(p,"gold","🪙 金幣","填當前金幣 → 掃描 → 填新值 → 寫入",
