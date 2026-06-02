@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "name": "弩手",
+    "note": "",
+    "stable_ptr": {
+      "ptr_addr": 1682864566976,
+      "offset": 316,
+      "rel_base": null,
+      "is_static": false
+    },
+    "ptr_chain": null,
+    "locked": true,
+    "lock_val": 38
+  },
+  {
+    "name": "小馬",
+    "note": "",
+    "stable_ptr": {
+      "ptr_addr": 554501368680,
+      "offset": 316,
+      "rel_base": null,
+      "is_static": false
+    },
+    "ptr_chain": null,
+    "locked": true,
+    "lock_val": 38
+  }
+]
