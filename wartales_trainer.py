@@ -237,6 +237,16 @@ RKEY=0x5b62db6d; RMUL=0x1F
 SCAN_LIMIT=0x7FFFFFFF0000
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])),
                          "wartales_data.json")
+LOG_FILE  = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])),
+                         "wartales_debug.log")
+
+def _log(msg):
+    ts = time.strftime("%H:%M:%S")
+    line = f"[{ts}] {msg}\n"
+    try:
+        with open(LOG_FILE, 'a', encoding='utf-8') as f:
+            f.write(line)
+    except: pass
 
 def enc_gold(v): return ((v*RMUL)^RKEY)&0xFFFFFFFF
 
@@ -602,8 +612,10 @@ class App(tk.Tk):
         if off is not None:
             char.max_hp=val; char.max_hp_off=off
             self._save_data()
+            _log(f"ANCHOR OK  {char.name}  addr={hp_addr:#x}  cur_hp={hp}  max_hp={val}  off={off:+d}")
             self._st(f"{char.name}：錨點 max_hp={val}（偏移{off:+d}）✅",GRN)
         else:
+            _log(f"ANCHOR FAIL  {char.name}  addr={hp_addr:#x}  cur_hp={hp}  (no candidate)")
             self._st(f"{char.name}：找不到 max_hp 錨點！建議在 HP 較高時加入清單",YEL)
 
     def _rescan_chars_bg(self, to_scan):
@@ -681,11 +693,14 @@ class App(tk.Tk):
             for c,_,_ in anchored:
                 if c.name in result:
                     new_addr=result[c.name]
+                    _log(f"RESCAN_FOUND  {c.name}  new_addr={new_addr:#x}  max_hp={c.max_hp}  off={c.max_hp_off}")
                     c.candidates=[new_addr]; c._last_addr=new_addr
                     c._write_count=0; recovered+=1
                     if c.locked and c.lock_val is not None:
                         if c.job: self.after_cancel(c.job)
                         c.job=None; self._do_char_lock(c,c.lock_val)
+                else:
+                    _log(f"RESCAN_MISS  {c.name}  max_hp={c.max_hp}  off={c.max_hp_off}  last_addr={getattr(c,'_last_addr',None)}")
             self._refresh_char_list()
             if recovered==len(anchored):
                 self._st(f"自動定位 {recovered} 個角色 ✅",GRN)
@@ -821,6 +836,7 @@ class App(tk.Tk):
               if c.locked and not c.candidates and c.max_hp]
         if need:
             names="、".join(c.name for c in need)
+            _log(f"RESCAN_TRIGGER  chars={names}")
             self._st(f"⚠ 偵測到 {names} 地址失效（換場？），自動重掃中...",YEL)
             self._pulse_ph=0
             self.after(20,self._pulse_led)
@@ -1184,19 +1200,19 @@ class App(tk.Tk):
         hp=char.read_hp(self._pm)
         if hp is not None and 0<hp<999999:
             char.write_hp(self._pm,val)
-            # 記住最後確認有效的地址（供快速重掃使用）
             a=char.get_addr(self._pm)
             if a: char._last_addr=a
             char._addr_fail_count=0
             char._write_count=getattr(char,'_write_count',0)+1
-            # Stale 偵測：寫了 50 次（1秒）後 HP 仍遠低於 lock_val
-            # → 地址仍可讀但已非角色真正 HP（free 但未清零的舊記憶體）
             if char._write_count>50 and hp < val//2:
+                _log(f"STALE addr={a:#x}  hp={hp}  lock_val={val}  write_count={char._write_count} → 清空候選")
                 char.candidates=[]; char._write_count=0
         else:
-            char._addr_fail_count=getattr(char,'_addr_fail_count',0)+1
-            char._write_count=0
-            if char._addr_fail_count>=5:
+            cnt=getattr(char,'_addr_fail_count',0)+1
+            char._addr_fail_count=cnt; char._write_count=0
+            if cnt>=5:
+                a=char.get_addr(self._pm)
+                _log(f"FAIL×5 addr={a}  hp={hp} → 清空候選")
                 char.candidates=[]; char._addr_fail_count=0
         char.job=self.after(20,lambda:self._do_char_lock(char,val))
 
