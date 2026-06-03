@@ -557,6 +557,7 @@ class App(tk.Tk):
         self._chars=[]; self._hp_pool=[]
         # 已儲存的 NOP Patch：[{'offset':int,'length':int,'orig_bytes':list,'label':str}]
         self._patches=[]
+        self._rescan_running=False  # 防止 _rescan_chars_bg 重複執行
         self._build()
         self._load_data()
         self._attach()
@@ -595,32 +596,33 @@ class App(tk.Tk):
 
     def _rescan_chars_bg(self, to_scan):
         """
-        後台用 max_hp 錨點掃描重定位角色 HP 地址。
-        HashLink GC non-moving，但每次重啟 process 地址全部改變，
-        故指標鏈常失效。改用 max_hp 值掃描 + 偏移驗證來快速找回地址。
+        分層重掃：
+          Tier1 先掃 _last_addr ±50MB（秒級完成）
+          Tier2 才全掃（30-60秒，Tier1 沒找到才用）
+        _rescan_running guard 防止同時觸發多次。
         """
-        if not self._pm or not to_scan: return
+        if self._rescan_running or not self._pm or not to_scan: return
         anchored=[(c,c.max_hp,c.max_hp_off) for c in to_scan
                   if c.max_hp and c.max_hp_off is not None]
         if not anchored:
-            names="、".join(c.name for c in to_scan)
-            self._st(f"{names}：無錨點，請手動重掃HP",RED); return
+            self._st("、".join(c.name for c in to_scan)+"：無錨點，請手動重掃HP",RED)
+            return
 
-        self._st(f"自動重定位 {len(anchored)} 個角色（掃描中）...",TEAL)
-        self._led.reset()
-        lookup={}  # max_hp_val → [(char, offset), ...]
+        self._rescan_running=True
+        self._st(f"重定位 {len(anchored)} 個角色...",TEAL)
+        lookup={}
         for c,mhp,off in anchored:
             lookup.setdefault(mhp,[]).append((c,off))
 
-        def worker():
-            found={}
+        def scan_range(addr_from, addr_to, existing_found):
+            found=dict(existing_found)
             allowed={S.MEMORY_PROTECTION.PAGE_EXECUTE_READ,
                      S.MEMORY_PROTECTION.PAGE_EXECUTE_READWRITE,
                      S.MEMORY_PROTECTION.PAGE_READWRITE,
                      S.MEMORY_PROTECTION.PAGE_READONLY}
-            addr=0; n=0
-            while addr<SCAN_LIMIT:
-                if self._stop.is_set(): break
+            addr=max(0,addr_from)
+            while addr<min(addr_to,SCAN_LIMIT):
+                if self._stop.is_set(): return found
                 try: mbi=pymem.memory.virtual_query(self._pm.process_handle,addr)
                 except: break
                 next_addr=mbi.BaseAddress+mbi.RegionSize
@@ -637,23 +639,38 @@ class App(tk.Tk):
                                 if c.name in found: continue
                                 hp_addr=hit-off
                                 hp=rdi(self._pm,hp_addr)
-                                # 驗證：目前HP ∈ (0, max_hp] 且 max_hp 在期望偏移
                                 if (hp is not None and 0<hp<=v and
                                         rdi(self._pm,hp_addr+off)==v):
                                     found[c.name]=hp_addr
-                        n+=1
-                        if n%30==0:
-                            self.after(0,lambda p=addr/SCAN_LIMIT:self._led.set(p))
                     except: pass
                 addr=next_addr
-            self.after(0,lambda p=1.0:self._led.set(p))
+            return found
+
+        def worker():
+            R=50*1024*1024  # ±50MB
+            # Tier 1：只掃上次地址附近（快）
+            hints=[getattr(c,'_last_addr',None) for c,_,_ in anchored]
+            found={}
+            for hint in set(h for h in hints if h):
+                found=scan_range(hint-R, hint+R, found)
+                self.after(0,lambda n=len(found):self._st(
+                    f"快速重掃中... 已找 {n}/{len(anchored)} 個",TEAL))
+                if len(found)==len(anchored): break
+
+            # Tier 2：若有漏掉 → 全掃
+            if len(found)<len(anchored):
+                self.after(0,lambda:self._st("快速掃描未完全，執行全域掃描...",YEL))
+                found=scan_range(0, SCAN_LIMIT, found)
             return found
 
         def on_done(result):
+            self._rescan_running=False
             recovered=0
             for c,_,_ in anchored:
                 if c.name in result:
-                    c.candidates=[result[c.name]]; recovered+=1
+                    new_addr=result[c.name]
+                    c.candidates=[new_addr]; c._last_addr=new_addr
+                    c._write_count=0; recovered+=1
                     if c.locked and c.lock_val is not None:
                         if c.job: self.after_cancel(c.job)
                         c.job=None; self._do_char_lock(c,c.lock_val)
@@ -667,8 +684,8 @@ class App(tk.Tk):
 
         def _run():
             result=worker()
-            self.after(0, lambda r=result: on_done(r))
-        threading.Thread(target=_run, daemon=True).start()
+            self.after(0,lambda r=result:on_done(r))
+        threading.Thread(target=_run,daemon=True).start()
 
     def _auto_resolve_all(self):
         """重連後用指標鏈還原所有位址並恢復鎖定"""
@@ -681,7 +698,7 @@ class App(tk.Tk):
                 if addr is not None:
                     hp=rdi(self._pm,addr)
                     if hp is not None and 0<hp<999999:
-                        c.candidates=[addr]; hp_ok+=1
+                        c.candidates=[addr]; c._last_addr=addr; hp_ok+=1
             if not c.candidates: hp_fail.append(c.name)
             if c.locked and c.lock_val is not None and c.candidates:
                 if c.job: self.after_cancel(c.job)
@@ -786,8 +803,8 @@ class App(tk.Tk):
         self.after(1000,self._refresh_loop)
 
     def _check_and_rescan_locked(self):
-        """每秒檢查：鎖定中但地址已失效的角色 → 觸發 max_hp 錨點重掃"""
-        if not self._pm or self._scanning: return
+        """每秒檢查：鎖定中但地址已失效 → 觸發重掃（有 _rescan_running guard）"""
+        if not self._pm or self._rescan_running: return
         need=[c for c in self._chars
               if c.locked and not c.candidates and c.max_hp]
         if need: self._rescan_chars_bg(need)
@@ -1145,14 +1162,20 @@ class App(tk.Tk):
         if not char.locked or not self._pm: return
         hp=char.read_hp(self._pm)
         if hp is not None and 0<hp<999999:
-            # 地址有效 → 持續寫入鎖定值
             char.write_hp(self._pm,val)
+            # 記住最後確認有效的地址（供快速重掃使用）
+            a=char.get_addr(self._pm)
+            if a: char._last_addr=a
             char._addr_fail_count=0
+            char._write_count=getattr(char,'_write_count',0)+1
+            # Stale 偵測：寫了 50 次（1秒）後 HP 仍遠低於 lock_val
+            # → 地址仍可讀但已非角色真正 HP（free 但未清零的舊記憶體）
+            if char._write_count>50 and hp < val//2:
+                char.candidates=[]; char._write_count=0
         else:
-            # 地址無效（新戰鬥/重新分配）→ 累計失敗次數
             char._addr_fail_count=getattr(char,'_addr_fail_count',0)+1
+            char._write_count=0
             if char._addr_fail_count>=5:
-                # 連續 5 次（~100ms）讀不到有效 HP → 清空地址，等自動重掃
                 char.candidates=[]; char._addr_fail_count=0
         char.job=self.after(20,lambda:self._do_char_lock(char,val))
 
