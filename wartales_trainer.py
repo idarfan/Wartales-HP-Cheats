@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Wartales Trainer v10 — 全數值鎖定持久化，LED 進度條"""
-import ctypes, sys, struct, threading, re, json, os
+import ctypes, ctypes.wintypes as _wt, sys, struct, threading, re, json, os, time
 import tkinter as tk
 from tkinter import messagebox
 
@@ -22,6 +22,212 @@ except ImportError:
     subprocess.run([sys.executable,"-m","pip","install","pymem"], check=True)
     import pymem, pymem.pattern, pymem.process, pymem.memory
     import pymem.ressources.structure as S
+
+# ══════════════════════════════════════════════════════════════════
+#  監聽 HP 寫入 — Windows x64 Debug API + 硬體中斷點（DR0 write 4B）
+# ══════════════════════════════════════════════════════════════════
+_k32 = ctypes.windll.kernel32
+
+_TH32CS_SNAPTHREAD  = 0x4
+_THREAD_ALL_ACCESS  = 0x1FFFFF
+_CONTEXT_DBG_REGS   = 0x10010    # ContextFlags: only debug registers
+_CONTEXT_FULL       = 0x10007F   # ContextFlags: integer + control + debug
+_EXC_EVENT          = 1
+_CRT_THREAD_EVENT   = 2
+_CRT_PROC_EVENT     = 3
+_EXIT_THREAD_EVENT  = 4
+_EXIT_PROC_EVENT    = 5
+_DBG_CONT           = 0x10002
+_DBG_EXC_NH         = 0x80010001
+_EXC_SINGLE_STEP    = 0x80000004
+_EXC_BREAKPOINT     = 0x80000003
+# DR7 = local-enable DR0 (bit0) | write cond (bits16-17=01) | 4-byte (bits18-19=11)
+_DR7_WRITE4         = (0b11<<18)|(0b01<<16)|0x1  # 0x000D0001
+
+# x64 CONTEXT offsets (winnt.h _CONTEXT, DECLSPEC_ALIGN(16))
+_O_FLAGS=0x30; _O_DR0=0x48; _O_DR6=0x68; _O_DR7=0x70; _O_RIP=0xF8
+_CTX_SZ=1232
+
+class _TE32(ctypes.Structure):
+    _fields_=[("dwSize",_wt.DWORD),("cntUsage",_wt.DWORD),
+              ("th32ThreadID",_wt.DWORD),("th32OwnerProcessID",_wt.DWORD),
+              ("tpBasePri",_wt.LONG),("tpDeltaPri",_wt.LONG),("dwFlags",_wt.DWORD)]
+
+class _ER(ctypes.Structure):
+    _fields_=[("ExceptionCode",ctypes.c_uint32),("ExceptionFlags",ctypes.c_uint32),
+              ("ExceptionRecord",ctypes.c_void_p),("ExceptionAddress",ctypes.c_void_p),
+              ("NumberParameters",ctypes.c_uint32),("ExceptionInformation",ctypes.c_uint64*15)]
+
+class _EDI(ctypes.Structure):
+    _fields_=[("ExceptionRecord",_ER),("dwFirstChance",ctypes.c_uint32)]
+
+class _DEU(ctypes.Union):
+    _fields_=[("Exception",_EDI),("pad",ctypes.c_uint8*160)]
+
+class _DE(ctypes.Structure):
+    _fields_=[("dwDebugEventCode",ctypes.c_uint32),("dwProcessId",ctypes.c_uint32),
+              ("dwThreadId",ctypes.c_uint32),("u",_DEU)]
+
+def _ctx_new():
+    """x64 CONTEXT 需 16-byte 對齊，手動確保。返回 (raw_buf, aligned_ptr, buf_offset)"""
+    raw=(ctypes.c_char*(_CTX_SZ+16))()
+    base=ctypes.addressof(raw)
+    off=(16-(base%16))%16
+    ctypes.memset(base+off,0,_CTX_SZ)
+    return raw, base+off, off
+
+def _cr32(raw,off,field): return struct.unpack_from('<I',raw,off+field)[0]
+def _cr64(raw,off,field): return struct.unpack_from('<Q',raw,off+field)[0]
+def _cw32(raw,off,field,v): struct.pack_into('<I',raw,off+field,v&0xFFFFFFFF)
+def _cw64(raw,off,field,v): struct.pack_into('<Q',raw,off+field,v&0xFFFFFFFFFFFFFFFF)
+
+def _enum_threads(pid):
+    snap=_k32.CreateToolhelp32Snapshot(_TH32CS_SNAPTHREAD,0)
+    if snap in(-1,0xFFFFFFFF): return []
+    te=_TE32(); te.dwSize=ctypes.sizeof(_TE32); tids=[]
+    if _k32.Thread32First(snap,ctypes.byref(te)):
+        while True:
+            if te.th32OwnerProcessID==pid: tids.append(te.th32ThreadID)
+            if not _k32.Thread32Next(snap,ctypes.byref(te)): break
+    _k32.CloseHandle(snap); return tids
+
+def _set_dr(tid, dr0, dr7):
+    """設置某執行緒的 DR0（監聽地址）和 DR7（中斷點控制）"""
+    ht=_k32.OpenThread(_THREAD_ALL_ACCESS,False,tid)
+    if not ht: return
+    _k32.SuspendThread(ht)
+    raw,ptr,off=_ctx_new()
+    _cw32(raw,off,_O_FLAGS,_CONTEXT_DBG_REGS)
+    if _k32.GetThreadContext(ht,ctypes.c_void_p(ptr)):
+        _cw64(raw,off,_O_DR0,dr0)
+        _cw64(raw,off,_O_DR7,dr7)
+        _cw32(raw,off,_O_FLAGS,_CONTEXT_DBG_REGS)
+        _k32.SetThreadContext(ht,ctypes.c_void_p(ptr))
+    _k32.ResumeThread(ht); _k32.CloseHandle(ht)
+
+def _get_ctx(tid):
+    """讀取執行緒目前的 DR6（觸發狀態）和 RIP（下一條指令位址）"""
+    ht=_k32.OpenThread(_THREAD_ALL_ACCESS,False,tid)
+    if not ht: return None
+    raw,ptr,off=_ctx_new()
+    _cw32(raw,off,_O_FLAGS,_CONTEXT_FULL)
+    r=None
+    if _k32.GetThreadContext(ht,ctypes.c_void_p(ptr)):
+        r={'dr6':_cr64(raw,off,_O_DR6),'rip':_cr64(raw,off,_O_RIP)}
+    _k32.CloseHandle(ht); return r
+
+def _guess_write_instr(buf20, rip):
+    """
+    硬體 data BP 觸發時 RIP 已指向下一條指令。
+    從 RIP 前的 15 個位元組逆向找「寫入記憶體」的指令。
+    buf20: read_bytes(rip-15, 20)
+    返回 (back_offset, instr_bytes)：back_offset 為負數（相對 rip）
+    """
+    for back in [3,4,6,7,2,5,8,9,10,1]:
+        off=15-back
+        if off<0: continue
+        b=bytes(buf20[off:off+back])
+        if not b: continue
+        b0=b[0]
+        # MOV [mem], r32
+        if b0==0x89: return -back, b
+        # MOV [mem], imm32
+        if b0==0xC7: return -back, b
+        # REX.W prefix + MOV
+        if b0 in(0x48,0x4C,0x44,0x49,0x4D) and len(b)>=3 and b[1] in(0x89,0x8B): return -back,b
+        # ADD/SUB/etc [mem], r
+        if b0 in(0x01,0x09,0x11,0x19,0x21,0x29,0x31): return -back,b
+    return -6, bytes(buf20[9:15])
+
+def watch_hp_write(pid, target_addr, proc_handle, mod_base=0,
+                   stop_evt=None, timeout=30, progress_cb=None):
+    """
+    使用 Windows Debug API + 硬體中斷點（DR0, write, 4-byte）
+    捕捉「寫入 target_addr」的指令。
+
+    返回 dict:
+      instr_addr   : 指令地址（絕對）
+      instr_bytes  : 指令位元組（bytes）
+      module_offset: 相對模組基址偏移（用於 AOB）
+      rip_after    : 觸發時 RIP（下一條指令）
+    或 None（超時）
+    或 {'error': str}（失敗）
+    """
+    if not _k32.DebugActiveProcess(pid):
+        err=ctypes.get_last_error()
+        return {'error':f'DebugActiveProcess 失敗 (err={err})，請確認以管理員執行'}
+    _k32.DebugSetProcessKillOnExit(False)
+
+    bp_set=set(); result=None
+    evt=_DE(); start=time.time()
+
+    def arm(tid):
+        if tid not in bp_set:
+            _set_dr(tid,target_addr,_DR7_WRITE4); bp_set.add(tid)
+
+    def arm_all():
+        for t in _enum_threads(pid): arm(t)
+
+    try:
+        arm_all()  # 附加後立即設 BP（此時遊戲執行緒已可接受 GetThreadContext）
+        while time.time()-start<timeout:
+            if stop_evt and stop_evt.is_set(): break
+            if progress_cb: progress_cb(min(0.99,(time.time()-start)/timeout))
+            if not _k32.WaitForDebugEvent(ctypes.byref(evt),200): continue
+
+            code=evt.dwDebugEventCode; tid=evt.dwThreadId; pid2=evt.dwProcessId
+
+            if code in(_CRT_PROC_EVENT,_CRT_THREAD_EVENT):
+                arm(tid); _k32.ContinueDebugEvent(pid2,tid,_DBG_CONT)
+
+            elif code==_EXIT_PROC_EVENT:
+                break
+
+            elif code==_EXC_EVENT:
+                exc=evt.u.Exception.ExceptionRecord.ExceptionCode
+                first=evt.u.Exception.dwFirstChance
+
+                if exc==_EXC_BREAKPOINT and first:
+                    # 附加時的初始 INT3 通知 → 補設所有執行緒
+                    arm_all(); _k32.ContinueDebugEvent(pid2,tid,_DBG_CONT)
+
+                elif exc==_EXC_SINGLE_STEP:
+                    ctx=_get_ctx(tid)
+                    if ctx and (ctx['dr6']&0xF):   # DR0-DR3 任一觸發
+                        rip=ctx['rip']
+                        try:
+                            buf20=pymem.memory.read_bytes(proc_handle,rip-15,20)
+                        except: buf20=bytes(20)
+                        back,ibytes=_guess_write_instr(buf20,rip)
+                        iaddr=rip+back
+                        result={
+                            'instr_addr':  iaddr,
+                            'instr_bytes': ibytes,
+                            'module_offset': iaddr-mod_base if mod_base else 0,
+                            'rip_after':   rip,
+                        }
+                        _k32.ContinueDebugEvent(pid2,tid,_DBG_CONT); break
+                    else:
+                        _k32.ContinueDebugEvent(pid2,tid,_DBG_EXC_NH)
+                else:
+                    cont=_DBG_CONT if not first else _DBG_EXC_NH
+                    _k32.ContinueDebugEvent(pid2,tid,cont)
+            else:
+                _k32.ContinueDebugEvent(pid2,tid,_DBG_CONT)
+    finally:
+        for t in bp_set: _set_dr(t,0,0)      # 清除所有硬體 BP
+        _k32.DebugActiveProcessStop(pid)      # 脫離偵錯器
+    return result
+
+def apply_nop_patch(proc_handle, addr, length):
+    """把 addr 開始的 length 個位元組替換為 NOP (0x90)"""
+    PAGE_EXECUTE_READWRITE=0x40
+    old=ctypes.c_uint32()
+    _k32.VirtualProtectEx(proc_handle,ctypes.c_void_p(addr),length,
+                          PAGE_EXECUTE_READWRITE,ctypes.byref(old))
+    nops=(ctypes.c_char*length)(*(b'\x90'*length))
+    _k32.WriteProcessMemory(proc_handle,ctypes.c_void_p(addr),nops,length,None)
+    _k32.VirtualProtectEx(proc_handle,ctypes.c_void_p(addr),length,old,ctypes.byref(old))
 
 # ── 常數 ────────────────────────────────────────────────────────────
 RKEY=0x5b62db6d; RMUL=0x1F
@@ -642,7 +848,8 @@ class App(tk.Tk):
         ar=tk.Frame(p,bg=BG2); ar.pack(fill="x",padx=6,pady=2)
         self._mb(ar,"➕ 加入角色清單",self._add_char,PURPLE,14).pack(side="left")
         self._mb(ar,"🔄 更新位址",self._update_char_addr,TEAL,10).pack(side="left",padx=4)
-        tk.Label(ar,text="← 戰鬥中重掃後選角色＋候選更新",
+        self._mb(ar,"👂 監聽寫入",self._start_watch_hp,YEL,9).pack(side="left",padx=2)
+        tk.Label(ar,text="← 選候選位址後點監聽，讓角色被打",
                  bg=BG2,fg=GRAY,font=("Segoe UI",9)).pack(side="left",padx=4)
 
         tk.Frame(p,bg=LINE,height=1).pack(fill="x",padx=6,pady=3)
@@ -903,6 +1110,88 @@ class App(tk.Tk):
                     self._st(f"{c.name} 無 HP 位址，請先掃描並縮小候選",RED); continue
             self._st(f"正在多層掃描 {c.name}（最多3層）...",TEAL)
             self._start_ml_scan(c); break
+
+    # ── 監聽 HP 寫入 ────────────────────────────────────────────────────
+    def _start_watch_hp(self):
+        """設置硬體中斷點，監聽選取的候選位址被誰寫入"""
+        if not self._chk(): return
+        sel=self._pool_lb.curselection()
+        if not sel:
+            messagebox.showwarning("提示","請先在候選池選取一個 HP 位址"); return
+        idx=sel[0]
+        if idx>=len(self._hp_pool):
+            messagebox.showwarning("提示","選取的位址無效，請重新掃描"); return
+        addr=self._hp_pool[idx]
+        hp=rdi(self._pm,addr)
+        mod_base=get_module_base(self._pm) or 0
+
+        self._st(f"監聽 {addr:#x}（HP={hp}）— 請讓角色被打一下...",YEL)
+        self._led.reset()
+
+        pid=self._pm.process_id
+        ph=self._pm.process_handle
+
+        def do():
+            return watch_hp_write(pid,addr,ph,mod_base,
+                                  stop_evt=self._stop,timeout=30,
+                                  progress_cb=self._led_cb)
+        def done(r):
+            if r is None:
+                self._st("30 秒超時，未偵測到 HP 寫入",RED)
+            elif isinstance(r,dict) and 'error' in r:
+                self._st(f"監聽失敗：{r['error']}",RED)
+            else:
+                self._st(f"捕捉到！指令 @ {r['instr_addr']:#x}  (exe+{r['module_offset']:#x})",GRN)
+                self.after(50,lambda:self._show_aob_result(r))
+
+        self._bg(do,done)
+
+    def _show_aob_result(self, r):
+        """顯示捕捉結果對話框，並提供 NOP Patch 按鈕"""
+        iaddr=r['instr_addr']; ibytes=r['instr_bytes']
+        moff=r['module_offset']; rip=r['rip_after']
+        hex_b=' '.join(f'{b:02X}' for b in ibytes)
+
+        win=tk.Toplevel(self); win.title("捕捉到 HP 寫入指令")
+        win.configure(bg=BG); win.resizable(False,False); win.grab_set()
+        win.geometry(f"+{self.winfo_x()+60}+{self.winfo_y()+80}")
+
+        def row(label,val,col=FG):
+            f=tk.Frame(win,bg=BG); f.pack(fill="x",padx=16,pady=2)
+            tk.Label(f,text=label,bg=BG,fg=GRAY,font=("Segoe UI",10),width=14,anchor="e").pack(side="left")
+            tk.Label(f,text=val,bg=BG,fg=col,font=("Consolas",11),anchor="w").pack(side="left")
+
+        tk.Label(win,text="✅  找到 HP 寫入指令",bg=BG,fg=GRN,
+                 font=("Segoe UI",13,"bold")).pack(pady=(14,6))
+
+        row("指令位址",f"{iaddr:#x}")
+        row("exe + 偏移",f"+{moff:#x}",ACC)
+        row("指令位元組",hex_b,YEL)
+        row("RIP（寫後）",f"{rip:#x}")
+
+        # AOB with wildcards for register byte
+        aob_w=' '.join(f'{b:02X}' if i==0 or i==len(ibytes)-1 else '??' for i,b in enumerate(ibytes))
+        row("建議 AOB",aob_w,PURPLE)
+
+        note_txt=(
+            "NOP Patch：把這條指令全部替換為 NOP（0x90）\n"
+            "效果：HP 永遠不被這條路徑減少（神模式）\n"
+            "重啟後失效，需重新 Patch。"
+        )
+        tk.Label(win,text=note_txt,bg=BG,fg=GRAY,font=("Segoe UI",9),
+                 justify="left",wraplength=380).pack(padx=16,pady=(8,4))
+
+        def do_patch():
+            try:
+                apply_nop_patch(self._pm.process_handle,iaddr,len(ibytes))
+                self._st(f"NOP Patch 已套用 @ {iaddr:#x}（{len(ibytes)} bytes）",GRN)
+                win.destroy()
+            except Exception as e:
+                messagebox.showerror("Patch 失敗",str(e))
+
+        bf=tk.Frame(win,bg=BG); bf.pack(pady=(4,14))
+        self._mb(bf,"⚡ 套用 NOP Patch",do_patch,RED,14).pack(side="left",padx=6)
+        self._mb(bf,"關閉",win.destroy,LINE,6).pack(side="left",padx=6)
 
     # ── 對話框 ─────────────────────────────────────────────────────────
     def _name_dlg(self,name="",note=""):
