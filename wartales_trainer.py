@@ -140,17 +140,19 @@ def _guess_write_instr(buf20, rip):
     return -6, bytes(buf20[9:15])
 
 def watch_hp_write(pid, target_addr, proc_handle, mod_base=0,
-                   stop_evt=None, timeout=30, progress_cb=None):
+                   stop_evt=None, timeout=None, progress_cb=None):
     """
     使用 Windows Debug API + 硬體中斷點（DR0, write, 4-byte）
     捕捉「寫入 target_addr」的指令。
+
+    timeout=None 表示無限等待（靠 stop_evt 停止）。
 
     返回 dict:
       instr_addr   : 指令地址（絕對）
       instr_bytes  : 指令位元組（bytes）
       module_offset: 相對模組基址偏移（用於 AOB）
       rip_after    : 觸發時 RIP（下一條指令）
-    或 None（超時）
+    或 None（取消）
     或 {'error': str}（失敗）
     """
     if not _k32.DebugActiveProcess(pid):
@@ -168,11 +170,13 @@ def watch_hp_write(pid, target_addr, proc_handle, mod_base=0,
     def arm_all():
         for t in _enum_threads(pid): arm(t)
 
+    def _timed_out():
+        return timeout is not None and time.time()-start>=timeout
+
     try:
-        arm_all()  # 附加後立即設 BP（此時遊戲執行緒已可接受 GetThreadContext）
-        while time.time()-start<timeout:
+        arm_all()
+        while not _timed_out():
             if stop_evt and stop_evt.is_set(): break
-            if progress_cb: progress_cb(min(0.99,(time.time()-start)/timeout))
             if not _k32.WaitForDebugEvent(ctypes.byref(evt),200): continue
 
             code=evt.dwDebugEventCode; tid=evt.dwThreadId; pid2=evt.dwProcessId
@@ -1112,8 +1116,16 @@ class App(tk.Tk):
             self._start_ml_scan(c); break
 
     # ── 監聽 HP 寫入 ────────────────────────────────────────────────────
+    def _pulse_led(self):
+        """監聽期間 LED 脈衝動畫（掃描進行中時持續跳動）"""
+        if not self._scanning: return
+        import math
+        self._pulse_ph=getattr(self,'_pulse_ph',0)+0.06
+        self._led.set(0.5+0.45*math.sin(self._pulse_ph))
+        self.after(40,self._pulse_led)
+
     def _start_watch_hp(self):
-        """設置硬體中斷點，監聽選取的候選位址被誰寫入"""
+        """設置硬體中斷點，監聽選取的候選位址被誰寫入（無固定超時，⏹ 停止取消）"""
         if not self._chk(): return
         sel=self._pool_lb.curselection()
         if not sel:
@@ -1125,26 +1137,26 @@ class App(tk.Tk):
         hp=rdi(self._pm,addr)
         mod_base=get_module_base(self._pm) or 0
 
-        self._st(f"監聽 {addr:#x}（HP={hp}）— 請讓角色被打一下...",YEL)
-        self._led.reset()
+        self._st(f"監聽 {addr:#x}（HP={hp}）— 讓角色被打，或按 ⏹ 停止",YEL)
+        self._pulse_ph=0
+        self.after(50,self._pulse_led)  # 啟動 LED 脈衝動畫
 
         pid=self._pm.process_id
         ph=self._pm.process_handle
 
         def do():
             return watch_hp_write(pid,addr,ph,mod_base,
-                                  stop_evt=self._stop,timeout=30,
-                                  progress_cb=self._led_cb)
+                                  stop_evt=self._stop,timeout=None)
         def done(r):
-            if r is None:
-                self._st("30 秒超時，未偵測到 HP 寫入",RED)
+            if r is None or (stop_evt := self._stop).is_set():
+                self._st("監聽已取消",GRAY)
             elif isinstance(r,dict) and 'error' in r:
                 self._st(f"監聽失敗：{r['error']}",RED)
             else:
                 self._st(f"捕捉到！指令 @ {r['instr_addr']:#x}  (exe+{r['module_offset']:#x})",GRN)
                 self.after(50,lambda:self._show_aob_result(r))
 
-        self._bg(do,done)
+        self._bg(do,done,btn=self._btn_hp1,restore_cmd=self._hp_first)
 
     def _show_aob_result(self, r):
         """顯示捕捉結果對話框，並提供 NOP Patch 按鈕"""
