@@ -224,14 +224,16 @@ def watch_hp_write(pid, target_addr, proc_handle, mod_base=0,
     return result
 
 def apply_nop_patch(proc_handle, addr, length):
-    """把 addr 開始的 length 個位元組替換為 NOP (0x90)"""
+    """把 addr 開始的 length 個位元組替換為 NOP (0x90)，返回原始位元組"""
     PAGE_EXECUTE_READWRITE=0x40
+    orig=pymem.memory.read_bytes(proc_handle,addr,length)
     old=ctypes.c_uint32()
     _k32.VirtualProtectEx(proc_handle,ctypes.c_void_p(addr),length,
                           PAGE_EXECUTE_READWRITE,ctypes.byref(old))
     nops=(ctypes.c_char*length)(*(b'\x90'*length))
     _k32.WriteProcessMemory(proc_handle,ctypes.c_void_p(addr),nops,length,None)
     _k32.VirtualProtectEx(proc_handle,ctypes.c_void_p(addr),length,old,ctypes.byref(old))
+    return bytes(orig)
 
 # ── 常數 ────────────────────────────────────────────────────────────
 RKEY=0x5b62db6d; RMUL=0x1F
@@ -556,6 +558,8 @@ class App(tk.Tk):
         self._stop=threading.Event(); self._lock_jobs={}
         self._stats={k:StatEntry(k) for k in ('gold','weight','spd','mv','rng')}
         self._chars=[]; self._hp_pool=[]
+        # 已儲存的 NOP Patch：[{'offset':int,'length':int,'orig_bytes':list,'label':str}]
+        self._patches=[]
         self._build()
         self._load_data()
         self._attach()
@@ -723,6 +727,35 @@ class App(tk.Tk):
         fail_chars=[c for c in self._chars if not c.candidates]
         if fail_chars:
             self.after(500, lambda fc=fail_chars: self._rescan_chars_bg(fc))
+
+        # 自動套用已儲存的 NOP Patch
+        if self._patches:
+            self.after(200, self._auto_apply_patches)
+
+    def _auto_apply_patches(self):
+        """連線後自動對所有已儲存的 NOP Patch 重新套用（exe 偏移固定，跨重啟有效）"""
+        if not self._pm or not self._patches: return
+        mod_base=get_module_base(self._pm)
+        if not mod_base: return
+        ok=0; skip=0; fail_list=[]
+        for p in self._patches:
+            addr=mod_base+p['offset']; n=p['length']
+            try:
+                cur=pymem.memory.read_bytes(self._pm.process_handle,addr,n)
+                nops=b'\x90'*n
+                if bytes(cur)==nops: ok+=1; continue   # 已是 NOP，跳過
+                # 驗證原始位元組（防遊戲更新後 patch 到錯誤地方）
+                orig=bytes(p.get('orig_bytes',[]))
+                if orig and bytes(cur)!=orig:
+                    fail_list.append(p['label']); continue
+                apply_nop_patch(self._pm.process_handle,addr,n)
+                ok+=1
+            except: fail_list.append(p['label'])
+        self._refresh_patch_list()
+        if fail_list:
+            self._st(f"Patch: {ok} 成功，{len(fail_list)} 失效（遊戲版本可能更新）",YEL)
+        elif ok:
+            self._st(f"自動套用 {ok} 個 NOP Patch ✅",GRN)
 
     # ── 背景掃描 ───────────────────────────────────────────────────────
     def _bg(self,fn,on_done,status_v=None,btn=None,restore_cmd=None):
@@ -895,6 +928,26 @@ class App(tk.Tk):
         self._mb(cr,"🔗 多層掃描",self._char_ml_scan,TEAL,9).pack(side="left",padx=2)
         tk.Label(p,text="雙擊編輯名稱/附註  ｜  多層掃描：HP縮到<5個後選角色觸發",
                  bg=BG2,fg=GRAY,font=("Segoe UI",9)).pack(anchor="w",padx=8)
+
+        # ── 自動 NOP Patch 清單 ──────────────────────────────────────────
+        tk.Frame(p,bg=LINE,height=1).pack(fill="x",padx=6,pady=(6,2))
+        ph2=tk.Frame(p,bg=BG2); ph2.pack(fill="x",padx=6)
+        tk.Label(ph2,text="⚡ 自動 NOP Patch",bg=BG2,fg=RED,
+                 font=("Segoe UI",10,"bold")).pack(side="left")
+        tk.Label(ph2,text="（每次連線自動套用）",bg=BG2,fg=GRAY,
+                 font=("Segoe UI",9)).pack(side="left",padx=4)
+        self._mb(ph2,"🗑 清除全部",self._clear_patches,LINE,8).pack(side="right")
+
+        plf=tk.Frame(p,bg=BG2); plf.pack(fill="x",padx=6,pady=(0,4))
+        psb=tk.Scrollbar(plf,bg=BG2,troughcolor=BG2); psb.pack(side="right",fill="y")
+        self._patch_lb=tk.Listbox(plf,bg=BG,fg=FG,font=("Consolas",9),height=2,
+                                   relief="flat",selectmode="single",
+                                   highlightthickness=1,highlightbackground=LINE,
+                                   selectbackground=RED,selectforeground=BG3,
+                                   yscrollcommand=psb.set)
+        self._patch_lb.pack(side="left",fill="x",expand=True)
+        psb.config(command=self._patch_lb.yview)
+        self._patch_lb.insert("end","  （尚無已儲存 Patch）")
 
     # ── HP 掃描 ────────────────────────────────────────────────────────
     def _hp_first(self):
@@ -1186,17 +1239,27 @@ class App(tk.Tk):
         row("建議 AOB",aob_w,PURPLE)
 
         note_txt=(
-            "NOP Patch：把這條指令全部替換為 NOP（0x90）\n"
+            "NOP Patch：把這條指令替換為 NOP（0x90）\n"
             "效果：HP 永遠不被這條路徑減少（神模式）\n"
-            "重啟後失效，需重新 Patch。"
+            "偏移已自動儲存，每次連線自動重新套用。"
         )
         tk.Label(win,text=note_txt,bg=BG,fg=GRAY,font=("Segoe UI",9),
                  justify="left",wraplength=380).pack(padx=16,pady=(8,4))
 
         def do_patch():
             try:
-                apply_nop_patch(self._pm.process_handle,iaddr,len(ibytes))
-                self._st(f"NOP Patch 已套用 @ {iaddr:#x}（{len(ibytes)} bytes）",GRN)
+                orig=apply_nop_patch(self._pm.process_handle,iaddr,len(ibytes))
+                # 儲存 Patch 資訊（同一偏移不重複儲存）
+                if not any(p['offset']==moff for p in self._patches):
+                    self._patches.append({
+                        'offset':   moff,
+                        'length':   len(ibytes),
+                        'orig_bytes': list(orig),
+                        'label':    f"HP寫入  exe+{moff:#x}  [{len(ibytes)}B]"
+                    })
+                    self._save_data()
+                    self._refresh_patch_list()
+                self._st(f"NOP Patch 已套用並儲存（exe+{moff:#x}）",GRN)
                 win.destroy()
             except Exception as e:
                 messagebox.showerror("Patch 失敗",str(e))
@@ -1233,12 +1296,37 @@ class App(tk.Tk):
         win.wait_window(); return result[0]
 
     # ── 資料存取 ───────────────────────────────────────────────────────
+    def _refresh_patch_list(self):
+        try:
+            self._patch_lb.delete(0,"end")
+            if not self._patches:
+                self._patch_lb.insert("end","  （尚無已儲存 Patch）"); return
+            mod_base=get_module_base(self._pm) if self._pm else 0
+            for p in self._patches:
+                status="✅"
+                if mod_base:
+                    try:
+                        cur=pymem.memory.read_bytes(self._pm.process_handle,
+                                                    mod_base+p['offset'],p['length'])
+                        status="✅" if bytes(cur)==b'\x90'*p['length'] else "⚠️"
+                    except: status="?"
+                self._patch_lb.insert("end",f"  {status}  {p['label']}")
+        except: pass
+
+    def _clear_patches(self):
+        if not self._patches: return
+        if messagebox.askyesno("清除 Patch","確定要移除所有已儲存的 NOP Patch？\n（不會恢復遊戲記憶體）"):
+            self._patches=[]
+            self._save_data(); self._refresh_patch_list()
+            self._st("已清除所有 Patch 記錄",GRAY)
+
     def _save_data(self):
         try:
             data={
                 'chars':[c.to_dict() for c in self._chars],
                 'stats':{k:st.to_dict() for k,st in self._stats.items()
-                         if st.has_stable() or st.locked}
+                         if st.has_stable() or st.locked},
+                'patches':self._patches,
             }
             with open(DATA_FILE,'w',encoding='utf-8') as f:
                 json.dump(data,f,ensure_ascii=False,indent=2)
@@ -1248,17 +1336,21 @@ class App(tk.Tk):
         try:
             if not os.path.exists(DATA_FILE): return
             with open(DATA_FILE,encoding='utf-8') as f: raw=json.load(f)
-            # 向後相容舊格式（list）
-            if isinstance(raw,list): chars_data=raw; stats_data={}
-            else: chars_data=raw.get('chars',[]); stats_data=raw.get('stats',{})
+            if isinstance(raw,list): chars_data=raw; stats_data={}; patches=[]
+            else:
+                chars_data=raw.get('chars',[]); stats_data=raw.get('stats',{})
+                patches=raw.get('patches',[])
             self._chars=[CharEntry.from_dict(d) for d in chars_data]
             for k,d in stats_data.items():
                 if k in self._stats: self._stats[k]=StatEntry.from_dict(d)
+            self._patches=patches
             self._refresh_char_list()
+            self._refresh_patch_list()
             n=len(self._chars); stable=sum(1 for c in self._chars if c.has_stable())
             stat_locked=sum(1 for st in self._stats.values() if st.locked)
             parts=[f"HP: {n} 個（{stable} 有指標）"]
             if stat_locked: parts.append(f"數值鎖定: {stat_locked} 個")
+            if patches: parts.append(f"Patch: {len(patches)} 個")
             self._st("  ".join(parts),TEAL)
         except: pass
 
