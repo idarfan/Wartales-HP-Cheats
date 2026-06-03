@@ -142,25 +142,18 @@ def _guess_write_instr(buf20, rip):
 def watch_hp_write(pid, target_addr, proc_handle, mod_base=0,
                    stop_evt=None, timeout=None, progress_cb=None):
     """
-    使用 Windows Debug API + 硬體中斷點（DR0, write, 4-byte）
-    捕捉「寫入 target_addr」的指令。
+    持續監聽 target_addr 的所有寫入，直到 stop_evt 被設置。
+    收集所有唯一寫入指令（去重），返回 list[dict] 或 {'error':str}。
 
-    timeout=None 表示無限等待（靠 stop_evt 停止）。
-
-    返回 dict:
-      instr_addr   : 指令地址（絕對）
-      instr_bytes  : 指令位元組（bytes）
-      module_offset: 相對模組基址偏移（用於 AOB）
-      rip_after    : 觸發時 RIP（下一條指令）
-    或 None（取消）
-    或 {'error': str}（失敗）
+    HP 減少可能來自多條路徑（直傷/技能/效果），需要全部 patch 才有效。
+    每次 BP 觸發後 DR7 保持不變，中斷點自動繼續有效。
     """
     if not _k32.DebugActiveProcess(pid):
         err=ctypes.get_last_error()
         return {'error':f'DebugActiveProcess 失敗 (err={err})，請確認以管理員執行'}
     _k32.DebugSetProcessKillOnExit(False)
 
-    bp_set=set(); result=None
+    bp_set=set(); results=[]; seen=set()
     evt=_DE(); start=time.time()
 
     def arm(tid):
@@ -192,25 +185,29 @@ def watch_hp_write(pid, target_addr, proc_handle, mod_base=0,
                 first=evt.u.Exception.dwFirstChance
 
                 if exc==_EXC_BREAKPOINT and first:
-                    # 附加時的初始 INT3 通知 → 補設所有執行緒
                     arm_all(); _k32.ContinueDebugEvent(pid2,tid,_DBG_CONT)
 
                 elif exc==_EXC_SINGLE_STEP:
                     ctx=_get_ctx(tid)
-                    if ctx and (ctx['dr6']&0xF):   # DR0-DR3 任一觸發
+                    if ctx and (ctx['dr6']&0xF):
                         rip=ctx['rip']
                         try:
                             buf20=pymem.memory.read_bytes(proc_handle,rip-15,20)
                         except: buf20=bytes(20)
                         back,ibytes=_guess_write_instr(buf20,rip)
                         iaddr=rip+back
-                        result={
-                            'instr_addr':  iaddr,
-                            'instr_bytes': ibytes,
-                            'module_offset': iaddr-mod_base if mod_base else 0,
-                            'rip_after':   rip,
-                        }
-                        _k32.ContinueDebugEvent(pid2,tid,_DBG_CONT); break
+                        # 去重：同一指令地址只記一次
+                        if iaddr not in seen:
+                            seen.add(iaddr)
+                            results.append({
+                                'instr_addr':    iaddr,
+                                'instr_bytes':   ibytes,
+                                'module_offset': iaddr-mod_base if mod_base else 0,
+                                'rip_after':     rip,
+                            })
+                            if progress_cb: progress_cb(len(results))
+                        # 不 break，繼續收集更多路徑
+                        _k32.ContinueDebugEvent(pid2,tid,_DBG_CONT)
                     else:
                         _k32.ContinueDebugEvent(pid2,tid,_DBG_EXC_NH)
                 else:
@@ -219,9 +216,9 @@ def watch_hp_write(pid, target_addr, proc_handle, mod_base=0,
             else:
                 _k32.ContinueDebugEvent(pid2,tid,_DBG_CONT)
     finally:
-        for t in bp_set: _set_dr(t,0,0)      # 清除所有硬體 BP
-        _k32.DebugActiveProcessStop(pid)      # 脫離偵錯器
-    return result
+        for t in bp_set: _set_dr(t,0,0)
+        _k32.DebugActiveProcessStop(pid)
+    return results
 
 def apply_nop_patch(proc_handle, addr, length):
     """把 addr 開始的 length 個位元組替換為 NOP (0x90)，返回原始位元組"""
@@ -1198,75 +1195,85 @@ class App(tk.Tk):
         ph=self._pm.process_handle
 
         def do():
+            def cb(n):
+                self.after(0,lambda:self._st(
+                    f"監聽 {addr:#x} — 已找到 {n} 個寫入點，繼續讓角色受傷或按 ⏹ 停止",YEL))
             return watch_hp_write(pid,addr,ph,mod_base,
-                                  stop_evt=self._stop,timeout=None)
+                                  stop_evt=self._stop,timeout=None,progress_cb=cb)
         def done(r):
-            if r is None or (stop_evt := self._stop).is_set():
-                self._st("監聽已取消",GRAY)
-            elif isinstance(r,dict) and 'error' in r:
-                self._st(f"監聽失敗：{r['error']}",RED)
-            else:
-                self._st(f"捕捉到！指令 @ {r['instr_addr']:#x}  (exe+{r['module_offset']:#x})",GRN)
-                self.after(50,lambda:self._show_aob_result(r))
+            if isinstance(r,dict) and 'error' in r:
+                self._st(f"監聽失敗：{r['error']}",RED); return
+            if not r:
+                self._st("監聽結束，未偵測到任何 HP 寫入",GRAY); return
+            self._st(f"監聽結束：共找到 {len(r)} 個寫入點",GRN)
+            self.after(50,lambda:self._show_aob_results(r))
 
         self._bg(do,done,btn=self._btn_hp1,restore_cmd=self._hp_first)
 
-    def _show_aob_result(self, r):
-        """顯示捕捉結果對話框，並提供 NOP Patch 按鈕"""
-        iaddr=r['instr_addr']; ibytes=r['instr_bytes']
-        moff=r['module_offset']; rip=r['rip_after']
-        hex_b=' '.join(f'{b:02X}' for b in ibytes)
-
-        win=tk.Toplevel(self); win.title("捕捉到 HP 寫入指令")
+    def _show_aob_results(self, results):
+        """顯示所有找到的 HP 寫入指令，可全選或個別 NOP Patch"""
+        win=tk.Toplevel(self); win.title(f"找到 {len(results)} 個 HP 寫入路徑")
         win.configure(bg=BG); win.resizable(False,False); win.grab_set()
-        win.geometry(f"+{self.winfo_x()+60}+{self.winfo_y()+80}")
+        win.geometry(f"+{self.winfo_x()+40}+{self.winfo_y()+60}")
 
-        def row(label,val,col=FG):
-            f=tk.Frame(win,bg=BG); f.pack(fill="x",padx=16,pady=2)
-            tk.Label(f,text=label,bg=BG,fg=GRAY,font=("Segoe UI",10),width=14,anchor="e").pack(side="left")
-            tk.Label(f,text=val,bg=BG,fg=col,font=("Consolas",11),anchor="w").pack(side="left")
+        tk.Label(win,
+            text=f"⚠️  找到 {len(results)} 個 HP 寫入路徑\n需全部 Patch 才能完全鎖血",
+            bg=BG,fg=YEL,font=("Segoe UI",12,"bold"),justify="center").pack(pady=(14,6))
 
-        tk.Label(win,text="✅  找到 HP 寫入指令",bg=BG,fg=GRN,
-                 font=("Segoe UI",13,"bold")).pack(pady=(14,6))
+        # 清單：每列一個寫入點，含 checkbox
+        frame=tk.Frame(win,bg=BG); frame.pack(fill="x",padx=16,pady=4)
+        checks=[]
+        for i,r in enumerate(results):
+            moff=r['module_offset']; ibytes=r['instr_bytes']
+            hex_b=' '.join(f'{b:02X}' for b in ibytes)
+            already=any(p['offset']==moff for p in self._patches)
+            v=tk.BooleanVar(value=not already)
+            checks.append((v,r))
+            row=tk.Frame(frame,bg=BG2,pady=3); row.pack(fill="x",pady=1)
+            tk.Checkbutton(row,variable=v,bg=BG2,activebackground=BG2,
+                           fg=FG,selectcolor=BG).pack(side="left",padx=4)
+            lbl=f"{'✅ 已儲存' if already else f'#{i+1}'}   exe+{moff:#x}   {hex_b}"
+            tk.Label(row,text=lbl,bg=BG2,
+                     fg=GRAY if already else FG,
+                     font=("Consolas",10)).pack(side="left")
 
-        row("指令位址",f"{iaddr:#x}")
-        row("exe + 偏移",f"+{moff:#x}",ACC)
-        row("指令位元組",hex_b,YEL)
-        row("RIP（寫後）",f"{rip:#x}")
+        tk.Label(win,
+            text="勾選要 Patch 的路徑（建議全選），套用後儲存偏移，每次開遊戲自動重新 Patch",
+            bg=BG,fg=GRAY,font=("Segoe UI",9),wraplength=420).pack(padx=16,pady=(4,6))
 
-        # AOB with wildcards for register byte
-        aob_w=' '.join(f'{b:02X}' if i==0 or i==len(ibytes)-1 else '??' for i,b in enumerate(ibytes))
-        row("建議 AOB",aob_w,PURPLE)
+        def do_patch_selected():
+            patched=0; errors=[]
+            for v,r in checks:
+                if not v.get(): continue
+                iaddr=r['instr_addr']; ibytes=r['instr_bytes']; moff=r['module_offset']
+                try:
+                    orig=apply_nop_patch(self._pm.process_handle,iaddr,len(ibytes))
+                    if not any(p['offset']==moff for p in self._patches):
+                        self._patches.append({
+                            'offset':     moff,
+                            'length':     len(ibytes),
+                            'orig_bytes': list(orig),
+                            'label':      f"HP寫入  exe+{moff:#x}  [{len(ibytes)}B]",
+                        })
+                    patched+=1
+                except Exception as e:
+                    errors.append(f"exe+{moff:#x}: {e}")
+            if patched:
+                self._save_data(); self._refresh_patch_list()
+                self._st(f"已 Patch {patched} 條路徑並儲存 ✅",GRN)
+            if errors:
+                messagebox.showerror("部分 Patch 失敗",'\n'.join(errors))
+            win.destroy()
 
-        note_txt=(
-            "NOP Patch：把這條指令替換為 NOP（0x90）\n"
-            "效果：HP 永遠不被這條路徑減少（神模式）\n"
-            "偏移已自動儲存，每次連線自動重新套用。"
-        )
-        tk.Label(win,text=note_txt,bg=BG,fg=GRAY,font=("Segoe UI",9),
-                 justify="left",wraplength=380).pack(padx=16,pady=(8,4))
-
-        def do_patch():
-            try:
-                orig=apply_nop_patch(self._pm.process_handle,iaddr,len(ibytes))
-                # 儲存 Patch 資訊（同一偏移不重複儲存）
-                if not any(p['offset']==moff for p in self._patches):
-                    self._patches.append({
-                        'offset':   moff,
-                        'length':   len(ibytes),
-                        'orig_bytes': list(orig),
-                        'label':    f"HP寫入  exe+{moff:#x}  [{len(ibytes)}B]"
-                    })
-                    self._save_data()
-                    self._refresh_patch_list()
-                self._st(f"NOP Patch 已套用並儲存（exe+{moff:#x}）",GRN)
-                win.destroy()
-            except Exception as e:
-                messagebox.showerror("Patch 失敗",str(e))
+        def sel_all():
+            for v,r in checks:
+                if not any(p['offset']==r['module_offset'] for p in self._patches):
+                    v.set(True)
 
         bf=tk.Frame(win,bg=BG); bf.pack(pady=(4,14))
-        self._mb(bf,"⚡ 套用 NOP Patch",do_patch,RED,14).pack(side="left",padx=6)
-        self._mb(bf,"關閉",win.destroy,LINE,6).pack(side="left",padx=6)
+        self._mb(bf,"☑ 全選",sel_all,LINE,6).pack(side="left",padx=4)
+        self._mb(bf,"⚡ Patch 勾選項目",do_patch_selected,RED,14).pack(side="left",padx=4)
+        self._mb(bf,"關閉",win.destroy,LINE,6).pack(side="left",padx=4)
 
     # ── 對話框 ─────────────────────────────────────────────────────────
     def _name_dlg(self,name="",note=""):
