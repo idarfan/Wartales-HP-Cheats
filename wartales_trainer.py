@@ -140,7 +140,7 @@ def resolve_ml_ptr(pm, chain):
     if v is None: return None
     return v+chain['offsets'][-1]
 
-def multilevel_ptr_scan(pm, target_addr, max_depth=3, max_off=0x800,
+def multilevel_ptr_scan(pm, target_addr, max_depth=6, max_off=0x800,
                          stop_evt=None, progress_cb=None):
     mod_base=get_module_base(pm) or 0
     allowed={S.MEMORY_PROTECTION.PAGE_EXECUTE_READ,
@@ -189,6 +189,23 @@ def multilevel_ptr_scan(pm, target_addr, max_depth=3, max_off=0x800,
     if progress_cb: progress_cb(1.0, f"完成 {len(results)} 條")
     return results
 
+def find_char_anchor(pm, hp_addr, cur_hp):
+    """
+    在 HP 地址附近尋找 max_hp 錨點。
+    HashLink GC non-moving，但每次重啟 process 地址全部改變，
+    max_hp 是 struct 內固定欄位，可用來重定位角色地址。
+    返回 (offset, max_hp_value) 或 (None, None)
+    """
+    best_off, best_val = None, None
+    for off in [-4, 4, 8, -8, 12, 16, -12, 20, -16, 24, -20, 28, -24, 32, -28]:
+        v = rdi(pm, hp_addr + off)
+        if v is None: continue
+        # max_hp 特徵：>= 目前 HP、合理範圍、正整數
+        if cur_hp <= v <= 9999 and v > 0:
+            if best_val is None or v < best_val:  # 取最小的（最接近 cur_hp 的）
+                best_off, best_val = off, v
+    return best_off, best_val
+
 # ════════════════════════════════════════════════════════════════════
 #  CharEntry — HP 角色
 # ════════════════════════════════════════════════════════════════════
@@ -198,6 +215,8 @@ class CharEntry:
         self.candidates=[]; self.ptr_candidates=[]
         self.stable_ptr=None; self.ptr_chain=None
         self.locked=False; self.lock_val=None; self.job=None
+        # HashLink 錨點：max_hp 用來跨重啟自動重定位
+        self.max_hp=None; self.max_hp_off=None
 
     def get_addr(self, pm):
         if self.ptr_chain and pm:
@@ -230,13 +249,15 @@ class CharEntry:
     def to_dict(self):
         return {'name':self.name,'note':self.note,
                 'stable_ptr':self.stable_ptr,'ptr_chain':self.ptr_chain,
-                'locked':self.locked,'lock_val':self.lock_val}
+                'locked':self.locked,'lock_val':self.lock_val,
+                'max_hp':self.max_hp,'max_hp_off':self.max_hp_off}
 
     @classmethod
     def from_dict(cls,d):
         e=cls(d['name'],d.get('note',''))
         e.stable_ptr=d.get('stable_ptr'); e.ptr_chain=d.get('ptr_chain')
         e.locked=d.get('locked',False); e.lock_val=d.get('lock_val')
+        e.max_hp=d.get('max_hp'); e.max_hp_off=d.get('max_hp_off')
         return e
 
 # ════════════════════════════════════════════════════════════════════
@@ -350,6 +371,94 @@ class App(tk.Tk):
         if not self._pm: messagebox.showwarning("未連接","請先啟動遊戲"); return False
         return True
 
+    def _probe_char_anchor(self, char):
+        """加入角色後立即探測 max_hp 錨點，存入 CharEntry 供跨重啟自動定位用"""
+        if not self._pm or not char.candidates: return
+        hp_addr=char.candidates[0]
+        hp=rdi(self._pm,hp_addr)
+        if hp is None or hp<=0: return
+        off,val=find_char_anchor(self._pm,hp_addr,hp)
+        if off is not None:
+            char.max_hp=val; char.max_hp_off=off
+            self._save_data()
+
+    def _rescan_chars_bg(self, to_scan):
+        """
+        後台用 max_hp 錨點掃描重定位角色 HP 地址。
+        HashLink GC non-moving，但每次重啟 process 地址全部改變，
+        故指標鏈常失效。改用 max_hp 值掃描 + 偏移驗證來快速找回地址。
+        """
+        if not self._pm or not to_scan: return
+        anchored=[(c,c.max_hp,c.max_hp_off) for c in to_scan
+                  if c.max_hp and c.max_hp_off is not None]
+        if not anchored:
+            names="、".join(c.name for c in to_scan)
+            self._st(f"{names}：無錨點，請手動重掃HP",RED); return
+
+        self._st(f"自動重定位 {len(anchored)} 個角色（掃描中）...",TEAL)
+        self._led.reset()
+        lookup={}  # max_hp_val → [(char, offset), ...]
+        for c,mhp,off in anchored:
+            lookup.setdefault(mhp,[]).append((c,off))
+
+        def worker():
+            found={}
+            allowed={S.MEMORY_PROTECTION.PAGE_EXECUTE_READ,
+                     S.MEMORY_PROTECTION.PAGE_EXECUTE_READWRITE,
+                     S.MEMORY_PROTECTION.PAGE_READWRITE,
+                     S.MEMORY_PROTECTION.PAGE_READONLY}
+            addr=0; n=0
+            while addr<SCAN_LIMIT:
+                if self._stop.is_set(): break
+                try: mbi=pymem.memory.virtual_query(self._pm.process_handle,addr)
+                except: break
+                next_addr=mbi.BaseAddress+mbi.RegionSize
+                if (mbi.state==S.MEMORY_STATE.MEM_COMMIT and
+                        mbi.protect in allowed and mbi.RegionSize>=4):
+                    try:
+                        size=mbi.RegionSize-(addr-mbi.BaseAddress)
+                        data=pymem.memory.read_bytes(self._pm.process_handle,addr,size)
+                        for i in range(0,len(data)-3,4):
+                            v=struct.unpack_from('<i',data,i)[0]
+                            if v not in lookup: continue
+                            hit=addr+i
+                            for c,off in lookup[v]:
+                                if c.name in found: continue
+                                hp_addr=hit-off
+                                hp=rdi(self._pm,hp_addr)
+                                # 驗證：目前HP ∈ (0, max_hp] 且 max_hp 在期望偏移
+                                if (hp is not None and 0<hp<=v and
+                                        rdi(self._pm,hp_addr+off)==v):
+                                    found[c.name]=hp_addr
+                        n+=1
+                        if n%30==0:
+                            self.after(0,lambda p=addr/SCAN_LIMIT:self._led.set(p))
+                    except: pass
+                addr=next_addr
+            self.after(0,lambda p=1.0:self._led.set(p))
+            return found
+
+        def on_done(result):
+            recovered=0
+            for c,_,_ in anchored:
+                if c.name in result:
+                    c.candidates=[result[c.name]]; recovered+=1
+                    if c.locked and c.lock_val is not None:
+                        if c.job: self.after_cancel(c.job)
+                        c.job=None; self._do_char_lock(c,c.lock_val)
+            self._refresh_char_list()
+            if recovered==len(anchored):
+                self._st(f"自動定位 {recovered} 個角色 ✅",GRN)
+            else:
+                failed=[c.name for c,_,_ in anchored if c.name not in result]
+                self._st(f"定位 {recovered}/{len(anchored)}；{'/'.join(failed)} 需手動重掃",YEL)
+            self.after(1500,self._led.reset)
+
+        def _run():
+            result=worker()
+            self.after(0, lambda r=result: on_done(r))
+        threading.Thread(target=_run, daemon=True).start()
+
     def _auto_resolve_all(self):
         """重連後用指標鏈還原所有位址並恢復鎖定"""
         if not self._pm: return
@@ -394,11 +503,16 @@ class App(tk.Tk):
         self._refresh_char_list()
         parts=[]
         if self._chars: parts.append(f"HP {hp_ok}/{len(self._chars)}" +
-            (f" 【{'、'.join(hp_fail)}需重掃】" if hp_fail else " ✅"))
+            (f" 【{'、'.join(hp_fail)}自動重掃中...】" if hp_fail else " ✅"))
         if any(st.has_stable() for st in self._stats.values()):
             parts.append(f"數值鎖定 {st_ok}個" +
                 (f" 【{'、'.join(st_fail)}指標失效】" if st_fail else " ✅"))
         if parts: self._st("  ".join(parts), YEL if (hp_fail or st_fail) else GRN)
+
+        # 指標鏈失效的角色 → 後台用 max_hp 錨點重定位
+        fail_chars=[c for c in self._chars if not c.candidates]
+        if fail_chars:
+            self.after(500, lambda fc=fail_chars: self._rescan_chars_bg(fc))
 
     # ── 背景掃描 ───────────────────────────────────────────────────────
     def _bg(self,fn,on_done,status_v=None,btn=None,restore_cmd=None):
@@ -623,6 +737,7 @@ class App(tk.Tk):
             if r is None: continue
             c=CharEntry(r[0],r[1]); c.candidates=[addr]
             self._chars.append(c); added+=1
+            self._probe_char_anchor(c)   # 立即探測 max_hp，供跨重啟定位
             self._bg_learn_ptr(c)
         self._refresh_char_list(); self._refresh_pool()
         if added: self._st(f"加入 {added} 個角色，開始學習指標...",TEAL)
@@ -640,7 +755,9 @@ class App(tk.Tk):
             new_addr=self._hp_pool[idx]
             if c.job: self.after_cancel(c.job); c.job=None
             c.candidates=[new_addr]; c.stable_ptr=None; c.ptr_chain=None
+            c.max_hp=None; c.max_hp_off=None   # 重置錨點，重新探測
             if c.locked and c.lock_val is not None: self._do_char_lock(c,c.lock_val)
+            self._probe_char_anchor(c)
             self._bg_learn_ptr(c)
         self._save_data(); self._refresh_char_list(); self._refresh_pool()
         names="、".join(c.name for c in char_sel)
