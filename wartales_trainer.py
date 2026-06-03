@@ -401,19 +401,28 @@ def multilevel_ptr_scan(pm, target_addr, max_depth=6, max_off=0x800,
 def find_char_anchor(pm, hp_addr, cur_hp):
     """
     在 HP 地址附近尋找 max_hp 錨點。
-    HashLink GC non-moving，但每次重啟 process 地址全部改變，
-    max_hp 是 struct 內固定欄位，可用來重定位角色地址。
+    max_hp 必須 > cur_hp 一定幅度（避免把護甲、其他小值誤認為 max_hp）。
+    若 cur_hp 很高（接近滿血），改用「等於 cur_hp」也接受。
     返回 (offset, max_hp_value) 或 (None, None)
     """
-    best_off, best_val = None, None
-    for off in [-4, 4, 8, -8, 12, 16, -12, 20, -16, 24, -20, 28, -24, 32, -28]:
+    # 最小差距：至少比 cur_hp 大 20%，且不小於 5
+    margin = max(5, cur_hp // 5)
+    candidates = []
+    for off in [4, 8, 12, 16, -4, 20, -8, 24, -12, 28, -16, 32, -20]:
         v = rdi(pm, hp_addr + off)
         if v is None: continue
-        # max_hp 特徵：>= 目前 HP、合理範圍、正整數
-        if cur_hp <= v <= 9999 and v > 0:
-            if best_val is None or v < best_val:  # 取最小的（最接近 cur_hp 的）
-                best_off, best_val = off, v
-    return best_off, best_val
+        if v >= cur_hp + margin and 0 < v <= 9999:
+            candidates.append((off, v))
+    if not candidates:
+        # 若加了 margin 找不到，寬鬆一點：只要 > cur_hp
+        for off in [4, 8, 12, 16, -4, 20, -8, 24, -12, 28, -16, 32, -20]:
+            v = rdi(pm, hp_addr + off)
+            if v is not None and v > cur_hp and 0 < v <= 9999:
+                candidates.append((off, v))
+    if not candidates: return None, None
+    # 挑最小的（即最接近 cur_hp 但仍大於 cur_hp+margin 的值，最像 max_hp）
+    candidates.sort(key=lambda x: x[1])
+    return candidates[0]
 
 # ════════════════════════════════════════════════════════════════════
 #  CharEntry — HP 角色
@@ -593,6 +602,9 @@ class App(tk.Tk):
         if off is not None:
             char.max_hp=val; char.max_hp_off=off
             self._save_data()
+            self._st(f"{char.name}：錨點 max_hp={val}（偏移{off:+d}）✅",GRN)
+        else:
+            self._st(f"{char.name}：找不到 max_hp 錨點！建議在 HP 較高時加入清單",YEL)
 
     def _rescan_chars_bg(self, to_scan):
         """
@@ -807,7 +819,16 @@ class App(tk.Tk):
         if not self._pm or self._rescan_running: return
         need=[c for c in self._chars
               if c.locked and not c.candidates and c.max_hp]
-        if need: self._rescan_chars_bg(need)
+        if need:
+            names="、".join(c.name for c in need)
+            self._st(f"⚠ 偵測到 {names} 地址失效（換場？），自動重掃中...",YEL)
+            self._pulse_ph=0
+            self.after(20,self._pulse_led)
+            self._rescan_chars_bg(need)
+        elif any(c.locked and c.candidates for c in self._chars):
+            # 全部鎖定且有效 → 顯示 ✅
+            locked_ok=sum(1 for c in self._chars if c.locked and c.candidates)
+            self._stl.config(fg=GRN if self._stv.get().startswith("⚠") else GRAY)
 
     # ── UI ─────────────────────────────────────────────────────────────
     def _build(self):
