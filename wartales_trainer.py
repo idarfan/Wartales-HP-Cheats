@@ -780,7 +780,17 @@ class App(tk.Tk):
     def _refresh_loop(self):
         try: self._refresh_char_list()
         except: pass
+        # 偵測鎖定角色地址失效（新戰鬥換了記憶體位址） → 自動觸發重掃
+        try: self._check_and_rescan_locked()
+        except: pass
         self.after(1000,self._refresh_loop)
+
+    def _check_and_rescan_locked(self):
+        """每秒檢查：鎖定中但地址已失效的角色 → 觸發 max_hp 錨點重掃"""
+        if not self._pm or self._scanning: return
+        need=[c for c in self._chars
+              if c.locked and not c.candidates and c.max_hp]
+        if need: self._rescan_chars_bg(need)
 
     # ── UI ─────────────────────────────────────────────────────────────
     def _build(self):
@@ -1133,8 +1143,18 @@ class App(tk.Tk):
 
     def _do_char_lock(self,char,val):
         if not char.locked or not self._pm: return
-        char.write_hp(self._pm,val)
-        char.job=self.after(150,lambda:self._do_char_lock(char,val))
+        hp=char.read_hp(self._pm)
+        if hp is not None and 0<hp<999999:
+            # 地址有效 → 持續寫入鎖定值
+            char.write_hp(self._pm,val)
+            char._addr_fail_count=0
+        else:
+            # 地址無效（新戰鬥/重新分配）→ 累計失敗次數
+            char._addr_fail_count=getattr(char,'_addr_fail_count',0)+1
+            if char._addr_fail_count>=5:
+                # 連續 5 次（~100ms）讀不到有效 HP → 清空地址，等自動重掃
+                char.candidates=[]; char._addr_fail_count=0
+        char.job=self.after(20,lambda:self._do_char_lock(char,val))
 
     def _char_unlock(self):
         for c in (self._char_sel() or self._chars):
@@ -1238,8 +1258,10 @@ class App(tk.Tk):
                      font=("Consolas",10)).pack(side="left")
 
         tk.Label(win,
-            text="勾選要 Patch 的路徑（建議全選），套用後儲存偏移，每次開遊戲自動重新 Patch",
-            bg=BG,fg=GRAY,font=("Segoe UI",9),wraplength=420).pack(padx=16,pady=(4,6))
+            text="⚠️  HP 不適合 NOP — 新戰鬥初始化也會被擋，角色從 0 HP 開始。\n"
+                 "HP 請用「🔒 鎖定」。此功能適合移動格/攻距等固定值。",
+            bg=BG,fg=YEL,font=("Segoe UI",9),wraplength=420,justify="left"
+            ).pack(padx=16,pady=(4,6))
 
         def do_patch_selected():
             patched=0; errors=[]
